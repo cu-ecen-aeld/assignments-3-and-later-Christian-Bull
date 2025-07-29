@@ -10,8 +10,7 @@ fi
 
 dir=$1
 
-
-if [[ ! -z "$dir" ]]; then
+if [ ! -z "$dir" ]; then
     echo "$1 exists"
     
     grep -crnw $dir -e $2

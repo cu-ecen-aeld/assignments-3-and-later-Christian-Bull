@@ -12,4 +12,4 @@ file=$1
 
 mkdir -p "${file%/*}" && touch "$file"
 
-echo $2 > $1
+echo $2 > $file

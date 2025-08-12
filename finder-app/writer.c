@@ -7,25 +7,24 @@
 #include <string.h>
 
 
-int main(){
+int main(int argc, char *argv[]){
 
     int fd;
-    char fileName[100];
-    char text[256];
     unsigned long word = 1720;
-    size_t count;
     ssize_t nr;
+
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s <filename> <text>\n", argv[0]);
+        return 1;
+    }
+
+    const char *fileName = argv[1];
+    const char *text = argv[2];
 
     openlog("writer-log", LOG_PID, LOG_USER);
 
     syslog(LOG_INFO, "Start logging");
-    
-    printf("Enter full path to filename: \n");
-    scanf("%s", fileName);
-
-    printf("Enter text: \n");
-    scanf(" %[^\n]", text);
-
+   
     fd = open (fileName, O_RDWR | O_CREAT, 0644);
     if (fd == -1) {
             perror ("open");

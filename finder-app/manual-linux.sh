@@ -18,6 +18,7 @@ BUSYBOX_VERSION=1_33_1
 FINDER_APP_DIR=$(realpath $(dirname $0))
 ARCH=arm64
 CROSS_COMPILE=aarch64-none-linux-gnu-
+COMPILER_LIB=$(${CROSS_COMPILE}gcc --print-sysroot)
 
 if [ $# -lt 1 ]
 then
@@ -93,7 +94,7 @@ lib1=$(basename "$lib1")
 libs=($(${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library" | awk -F'[][]' '{print $2}'))
 
 # find on filesystem
-file1=$(find /opt/ /lib/ -name "$lib1" 2>/dev/null | head -n 1)
+file1=$(find $COMPILER_LIB -name "$lib1" 2>/dev/null | head -n 1)
 echo $file1
 
 cp "$file1" ${OUTDIR}/rootfs/lib
@@ -101,7 +102,7 @@ cp "$file1" ${OUTDIR}/rootfs/lib
 for lib in "${libs[@]}"; 
 do
     echo "finding $lib"
-    file=$(find /opt/ /lib/ -name "$lib" 2>/dev/null | head -n 1)
+    file=$(find $COMPILER_LIB -name "$lib" 2>/dev/null | head -n 1)
     cp "$file" ${OUTDIR}/rootfs/lib64
 
 done

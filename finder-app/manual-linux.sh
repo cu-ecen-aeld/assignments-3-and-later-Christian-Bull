@@ -89,15 +89,20 @@ make CONFIG_PREFIX=/${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}
 
 echo "Library dependencies"
 cd ${OUTDIR}/rootfs
-${CROSS_COMPILE}readelf -a bin/busybox | grep "program interpreter" | awk -F': ' '{print $2}' | tr -d '[]'
-${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
+lib1=$(${CROSS_COMPILE}readelf -a bin/busybox | grep "program interpreter" | awk -F': ' '{print $2}' | tr -d '[]')
+lib1=$(basename "$lib1")
 
-# TODO: Add library dependencies to rootfs
-# should I automate this? seemed rather annoying and specific to track down
-cp ${CROSS_COMPILE_DIR}/libc/lib/ld-linux-aarch64.so.1 ${OUTDIR}/rootfs/lib
-cp ${CROSS_COMPILE_DIR}/libc/lib64/libm.so.6 ${OUTDIR}/rootfs/lib64
-cp ${CROSS_COMPILE_DIR}/libc/lib64/libresolv.so.2 ${OUTDIR}/rootfs/lib64
-cp ${CROSS_COMPILE_DIR}/libc/lib64/libc.so.6 ${OUTDIR}/rootfs/lib64
+libs=($(${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library" | awk -F'[][]' '{print $2}'))
+
+# find on filesystem
+cp $(find /usr/ /opt/ -name "$lib1") ${OUTDIR}/rootfs/lib
+
+for lib in "${libs[@]}"; 
+do
+    echo "finding $lib"
+    file=$(find /usr/ /opt/ -name "$lib" 2>/dev/null | head -n 1)
+    cp "$file" ${OUTDIR}/rootfs/lib64
+done
 
 # TODO: Make device nodes
 sudo mknod -m 666 dev/null c 1 3

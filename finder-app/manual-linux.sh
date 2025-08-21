@@ -93,13 +93,14 @@ lib1=$(basename "$lib1")
 libs=($(${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library" | awk -F'[][]' '{print $2}'))
 
 # find on filesystem
-cp $(find /usr/ /opt/ -name "$lib1") ${OUTDIR}/rootfs/lib
+cp $(find /opt/ -name "$lib1") ${OUTDIR}/rootfs/lib
 
 for lib in "${libs[@]}"; 
 do
     echo "finding $lib"
-    file=$(find /usr/ /opt/ -name "$lib" 2>/dev/null | head -n 1)
+    file=$(find /opt/ -name "$lib" 2>/dev/null | head -n 1)
     cp "$file" ${OUTDIR}/rootfs/lib64
+
 done
 
 # TODO: Make device nodes

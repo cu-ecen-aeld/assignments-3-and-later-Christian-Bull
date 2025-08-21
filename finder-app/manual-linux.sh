@@ -18,8 +18,6 @@ BUSYBOX_VERSION=1_33_1
 FINDER_APP_DIR=$(realpath $(dirname $0))
 ARCH=arm64
 CROSS_COMPILE=aarch64-none-linux-gnu-
-CROSS_COMPILE_DIR=/opt/arm-gnu-toolchain/arm-gnu-toolchain-14.3.rel1-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu
-WRITER_APP=/home/cbull/projects/cu-boulder/ecea-5305/assignment-1-Christian-Bull/finder-app
 
 if [ $# -lt 1 ]
 then
@@ -109,7 +107,7 @@ sudo mknod -m 666 dev/null c 1 3
 sudo mknod -m 666 dev/console c 5 1
 
 # TODO: Clean and build the writer utility
-cd ${WRITER_APP}
+cd ${FINDER_APP_DIR}
 make clean
 make writer CROSS_COMPILE=${CROSS_COMPILE}
 

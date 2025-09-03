@@ -1,0 +1,12 @@
+/tmp/aeld-data exists
+/tmp/aeld-data/Christian-Bull10.txt:1
+/tmp/aeld-data/Christian-Bull9.txt:1
+/tmp/aeld-data/Christian-Bull8.txt:1
+/tmp/aeld-data/Christian-Bull7.txt:1
+/tmp/aeld-data/Christian-Bull6.txt:1
+/tmp/aeld-data/Christian-Bull5.txt:1
+/tmp/aeld-data/Christian-Bull4.txt:1
+/tmp/aeld-data/Christian-Bull3.txt:1
+/tmp/aeld-data/Christian-Bull2.txt:1
+/tmp/aeld-data/Christian-Bull1.txt:1
+The number of files are 10 and the number of matching lines are 10

@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
   struct sockaddr_storage their_addr;
   socklen_t addr_size;
   struct addrinfo hints, *res;
-  int sockfd, new_fd;
+  int new_fd;
   struct addrinfo *servinfo;
   char s[INET6_ADDRSTRLEN];
 
@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
-      
+
       close(fd);
     }
 

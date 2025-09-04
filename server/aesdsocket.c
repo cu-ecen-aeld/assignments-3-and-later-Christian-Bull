@@ -19,7 +19,7 @@ int write_to_file(const char *data, size_t len) {
   int fd;
   ssize_t nr;
 
-  fd = open(fileName, O_RDWR | O_CREAT | O_APPEND, 0644); // append to file
+  fd = open(fileName, O_RDWR | O_CREAT | O_APPEND | O_SYNC, 0644); // append to file
   if (fd == -1) {
     perror("open");
     fprintf(stderr, "Error: Opening file %s failed\n", fileName);

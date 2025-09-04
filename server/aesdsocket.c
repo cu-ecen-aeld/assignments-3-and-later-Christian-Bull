@@ -105,6 +105,9 @@ int main(int argc, char *argv[]) {
   struct addrinfo *servinfo;
   char s[INET6_ADDRSTRLEN];
 
+  // Initialize syslog
+  openlog("aesdsocket", LOG_PID | LOG_CONS, LOG_USER);
+  
   setup_signal_handlers();
 
   // first, load up address structs with getaddrinfo():
@@ -117,18 +120,15 @@ int main(int argc, char *argv[]) {
   if ((status = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
     fprintf(stderr, "gai error: %s\n", gai_strerror(status));
     exit(1);
-    return -1;
   }
 
   // make a socket, bind it, and listen on it:
   res = servinfo;
   sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
-  int bind_status;
-  if ((bind_status = bind(sockfd, res->ai_addr, res->ai_addrlen)) < 0) {
-    fprintf(stderr, "gai error: %s\n", gai_strerror(bind_status));
+  if (bind(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
+    perror("bind");
     exit(1);
-    return -1;
   }
 
   // fork here
@@ -162,11 +162,14 @@ int main(int argc, char *argv[]) {
   freeaddrinfo(servinfo);
 
   if (listen(sockfd, BACKLOG) == -1) {
-    fprintf(stderr, "gai error: listen");
+    perror("listen");
     exit(1);
-    return -1;
   }
-  fprintf(stdout, "Server listening on port %s\n", PORT);
+  
+  if (!daemon) {
+    fprintf(stdout, "Server listening on port %s\n", PORT);
+  }
+  syslog(LOG_INFO, "Server listening on port %s", PORT);
 
   // now accept an incoming connection:
   while (1) {
@@ -180,34 +183,57 @@ int main(int argc, char *argv[]) {
 
     inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr),
               s, sizeof s);
-    printf("server: got connection from %s\n", s);
+    if (!daemon) {
+      printf("server: got connection from %s\n", s);
+    }
     syslog(LOG_INFO, "Accepted connection from %s", s);
 
     char buf[1024];
     ssize_t bytes_received;
 
+    // Receive data from client
     while ((bytes_received = recv(new_fd, buf, sizeof(buf), 0)) > 0) {
       int wf = write_to_file(buf, bytes_received);
       if (wf == -1) {
-        printf("Error writing data to file\n");
+        if (!daemon) {
+          printf("Error writing data to file\n");
+        }
+        syslog(LOG_ERR, "Error writing data to file");
         break;
       }
+    }
+    
+    if (bytes_received == -1) {
+      perror("recv");
+      close(new_fd);
+      continue;
     }
 
     // send back file contents
     int fd = open(fileName, O_RDONLY);
     if (fd == -1) {
-      printf("Error opening file\n");
+      if (!daemon) {
+        printf("Error opening file\n");
+      }
       syslog(LOG_ERR, "Error opening file");
     } else {
       char file_buf[1024];
       ssize_t nread;
       while ((nread = read(fd, file_buf, sizeof(file_buf))) > 0) {
-        if (send(new_fd, file_buf, nread, 0) == -1) {
-          printf("Sending data\n");
-          syslog(LOG_ERR, "Error sending data");
-          break;
+        ssize_t total_sent = 0;
+        ssize_t sent;
+        while (total_sent < nread) {
+          sent = send(new_fd, file_buf + total_sent, nread - total_sent, 0);
+          if (sent == -1) {
+            if (!daemon) {
+              printf("Error sending data\n");
+            }
+            syslog(LOG_ERR, "Error sending data");
+            break;
+          }
+          total_sent += sent;
         }
+        if (sent == -1) break;
       }
 
       close(fd);

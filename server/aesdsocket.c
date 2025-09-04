@@ -10,16 +10,32 @@
 #include <sys/syslog.h>
 #include <sys/types.h>
 #include <unistd.h>
-#define PORT "9000" // the port users will be connecting to
-#define BACKLOG 10  // how many pending connections queue holds
+#define PORT "9000"
+#define BACKLOG 10
 
 const char *fileName = "/var/tmp/aesdsocketdata";
+
+int write_to_open_file(int fd, const char *data, size_t len) {
+  ssize_t nr;
+  size_t total_written = 0;
+  
+  while (total_written < len) {
+    nr = write(fd, data + total_written, len - total_written);
+    if (nr == -1) {
+      perror("write");
+      return -1;
+    }
+    total_written += nr;
+  }
+  
+  return 0;
+}
 
 int write_to_file(const char *data, size_t len) {
   int fd;
   ssize_t nr;
 
-  fd = open(fileName, O_RDWR | O_CREAT | O_APPEND | O_SYNC, 0644); // append to file
+  fd = open(fileName, O_RDWR | O_CREAT | O_APPEND | O_SYNC, 0644);
   if (fd == -1) {
     perror("open");
     fprintf(stderr, "Error: Opening file %s failed\n", fileName);
@@ -80,7 +96,7 @@ void setup_signal_handlers(void) {
   struct sigaction sa;
   sa.sa_handler = handle_signal;
   sigemptyset(&sa.sa_mask);
-  sa.sa_flags = 0; // don't restart syscalls like accept()
+  sa.sa_flags = 0;
 
   if (sigaction(SIGINT, &sa, NULL) == -1) {
     perror("sigaction(SIGINT)");
@@ -191,10 +207,20 @@ int main(int argc, char *argv[]) {
     char buf[1024];
     ssize_t bytes_received;
 
-    // Receive data from client
+    // Open file for writing once at the beginning of data reception
+    int write_fd = open(fileName, O_RDWR | O_CREAT | O_APPEND | O_SYNC, 0644);
+    if (write_fd == -1) {
+      if (!daemon) {
+        printf("Error opening file for writing\n");
+      }
+      syslog(LOG_ERR, "Error opening file for writing");
+      close(new_fd);
+      continue;
+    }
+
+    // Receive data from client and write to open file
     while ((bytes_received = recv(new_fd, buf, sizeof(buf), 0)) > 0) {
-      int wf = write_to_file(buf, bytes_received);
-      if (wf == -1) {
+      if (write_to_open_file(write_fd, buf, bytes_received) == -1) {
         if (!daemon) {
           printf("Error writing data to file\n");
         }
@@ -203,6 +229,11 @@ int main(int argc, char *argv[]) {
       }
     }
     
+    // Close the write file
+    if (close(write_fd) == -1) {
+      perror("close write file");
+    }
+
     if (bytes_received == -1) {
       perror("recv");
       close(new_fd);
@@ -210,33 +241,35 @@ int main(int argc, char *argv[]) {
     }
 
     // send back file contents
-    int fd = open(fileName, O_RDONLY);
-    if (fd == -1) {
+    int read_fd = open(fileName, O_RDONLY);
+    if (read_fd == -1) {
       if (!daemon) {
-        printf("Error opening file\n");
+        printf("Error opening file for reading\n");
       }
-      syslog(LOG_ERR, "Error opening file");
+      syslog(LOG_ERR, "Error opening file for reading");
     } else {
       char file_buf[1024];
       ssize_t nread;
-      while ((nread = read(fd, file_buf, sizeof(file_buf))) > 0) {
+      int send_error = 0;
+      
+      while ((nread = read(read_fd, file_buf, sizeof(file_buf))) > 0 && !send_error) {
         ssize_t total_sent = 0;
         ssize_t sent;
-        while (total_sent < nread) {
+        while (total_sent < nread && !send_error) {
           sent = send(new_fd, file_buf + total_sent, nread - total_sent, 0);
           if (sent == -1) {
             if (!daemon) {
               printf("Error sending data\n");
             }
             syslog(LOG_ERR, "Error sending data");
+            send_error = 1;
             break;
           }
           total_sent += sent;
         }
-        if (sent == -1) break;
       }
 
-      close(fd);
+      close(read_fd);
     }
 
     close(new_fd);

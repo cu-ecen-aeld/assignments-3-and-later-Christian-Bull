@@ -15,7 +15,7 @@
 
 const char *fileName = "/var/tmp/aesdsocketdata";
 
-int write_to_file(const char *text) {
+int write_to_file(const char *data, size_t len) {
   int fd;
   ssize_t nr;
 
@@ -26,21 +26,10 @@ int write_to_file(const char *text) {
     return -1;
   }
 
-  nr = write(fd, text, strlen(text));
+  nr = write(fd, data, len);
   if (nr == -1) {
     perror("write");
     fprintf(stderr, "Error: Writing to file %s failed\n", fileName);
-    close(fd);
-    return -1;
-  }
-
-  fprintf(stdout, "Writing \"%s\" to %s\n", text, fileName);
-
-  // add newline, messy but avoids appending text
-  nr = write(fd, "\n", 1);
-  if (nr == -1) {
-    perror("write");
-    fprintf(stderr, "Error: Writing newline to file %s failed\n", fileName);
     close(fd);
     return -1;
   }
@@ -70,7 +59,8 @@ int sockfd = -1; // global listening socket
 
 // signal handler
 void handle_signal(int sig) {
-  fprintf(stdout, "Caught signal %d, exiting\n", sig);
+  fprintf(stdout, "Caught signal, exiting\n");
+  syslog(LOG_INFO, "Caught signal, exiting\n");
 
   if (sockfd != -1) {
     close(sockfd);
@@ -153,18 +143,33 @@ int main(void) {
     printf("server: got connection from %s\n", s);
     syslog(LOG_INFO, "Accepted connection from %s", s);
 
+    char buf[1024];
+    ssize_t bytes_received;
+
     while ((bytes_received = recv(new_fd, buf, sizeof(buf), 0)) > 0) {
-        ssize_t nr = write(fd, buf, bytes_received);
-        if (nr == -1) {
-            perror("write");
-            break;
-        }
+      int wf = write_to_file(buf, bytes_received);
+      if (wf == -1) {
+        printf("Error writing data to file\n");
+        return -1;
+      }
     }
 
-    // write connection IP to file
-    if (write_to_file(s) == -1) {
-      fprintf(stderr, "writing connection info to file failed");
-      exit(1);
+    // send back file contents
+    int fd = open(fileName, O_RDONLY);
+    if (fd == -1) {
+        printf("Error opening file\n");
+        syslog(LOG_ERR, "Error opening file");
+    } else {
+      char file_buf[1024];
+      ssize_t nread;
+      while ((nread = read(fd, file_buf, sizeof(file_buf))) > 0) {
+        if (send(new_fd, file_buf, nread, 0) == -1) {
+          printf("Sending data\n");
+          syslog(LOG_ERR, "Error sending data");
+          break;
+        }
+      }
+        close(fd);
     }
 
     close(new_fd); // parent doesn't need this

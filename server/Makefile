@@ -13,3 +13,6 @@ aesdsocket: aesdsocket.c
 clean veryclean:
 	$(RM) aesdsocket
 	$(RM) $(LOG_FILE)
+
+
+# echo abcdefg | nc localhost 9000 -w 1

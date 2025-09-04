@@ -209,9 +209,11 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
+      
       close(fd);
     }
 
-    close(new_fd); // parent doesn't need this
+    close(new_fd);
   }
+  return 0;
 }

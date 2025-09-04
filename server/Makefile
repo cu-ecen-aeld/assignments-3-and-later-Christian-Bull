@@ -1,6 +1,7 @@
 CC      = gcc
 CFLAGS  = -g
 RM      = rm -f
+LOG_FILE = /var/tmp/aesdsocketdata
 
 default: all
 
@@ -11,3 +12,4 @@ aesdsocket: aesdsocket.c
 
 clean veryclean:
 	$(RM) aesdsocket
+	$(RM) $(LOG_FILE)

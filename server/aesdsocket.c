@@ -67,6 +67,11 @@ void handle_signal(int sig) {
     fprintf(stdout, "Closed listening socket\n");
   }
 
+  if (remove(fileName) == 0) {
+    fprintf(stdout, "Removed tmp file\n");
+    syslog(LOG_INFO, "Removed tmp file\n");
+  }
+
   closelog();
   exit(0);
 }
@@ -87,7 +92,12 @@ void setup_signal_handlers(void) {
   }
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+  int daemon = 0;
+  if (argc == 2 && strcmp(argv[1], "-d") == 0) {
+    daemon = 1;
+  }
+
   struct sockaddr_storage their_addr;
   socklen_t addr_size;
   struct addrinfo hints, *res;
@@ -120,6 +130,36 @@ int main(void) {
     exit(1);
     return -1;
   }
+
+  // fork here
+  if (daemon == 1) {
+    pid_t pid = fork();
+    if (pid < 0) {
+      perror("fork");
+      exit(1);
+    }
+    if (pid > 0) {
+      // parent exits
+      exit(0);
+    }
+
+    // child continues as daemon
+    if (setsid() < 0) {
+      perror("setsid");
+      exit(1);
+    }
+
+    if (chdir("/") < 0) {
+      perror("chdir");
+      exit(1);
+    }
+
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+  }
+
+  freeaddrinfo(servinfo);
 
   if (listen(sockfd, BACKLOG) == -1) {
     fprintf(stderr, "gai error: listen");
@@ -157,8 +197,8 @@ int main(void) {
     // send back file contents
     int fd = open(fileName, O_RDONLY);
     if (fd == -1) {
-        printf("Error opening file\n");
-        syslog(LOG_ERR, "Error opening file");
+      printf("Error opening file\n");
+      syslog(LOG_ERR, "Error opening file");
     } else {
       char file_buf[1024];
       ssize_t nread;
@@ -169,7 +209,7 @@ int main(void) {
           break;
         }
       }
-        close(fd);
+      close(fd);
     }
 
     close(new_fd); // parent doesn't need this

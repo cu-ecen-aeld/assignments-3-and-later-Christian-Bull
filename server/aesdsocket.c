@@ -13,7 +13,7 @@
 #define PORT "9000" // the port users will be connecting to
 #define BACKLOG 10  // how many pending connections queue holds
 
-const char *fileName = "/var/tmp/aesdsocketdata";
+const char *fileName = "/tmp/aesdsocketdata";
 
 int write_to_file(const char *data, size_t len) {
   int fd;
@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
       int wf = write_to_file(buf, bytes_received);
       if (wf == -1) {
         printf("Error writing data to file\n");
-        return -1;
+        break;
       }
     }
 

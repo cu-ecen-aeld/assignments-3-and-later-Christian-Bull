@@ -1,7 +1,7 @@
 CC      = gcc
 CFLAGS  = -g
 RM      = rm -f
-LOG_FILE = /var/tmp/aesdsocketdata
+LOG_FILE = /tmp/aesdsocketdata
 
 default: all
 

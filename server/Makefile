@@ -1,5 +1,5 @@
 CC      = gcc
-CFLAGS  = -g
+CFLAGS  = -g -Wall -Werror
 RM      = rm -f
 LOG_FILE = /var/tmp/aesdsocketdata
 
@@ -13,6 +13,3 @@ aesdsocket: aesdsocket.c
 clean veryclean:
 	$(RM) aesdsocket
 	$(RM) $(LOG_FILE)
-
-
-# echo abcdefg | nc localhost 9000 -w 1

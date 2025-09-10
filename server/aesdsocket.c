@@ -34,6 +34,13 @@ int write_to_file(const char *data, size_t len) {
     return -1;
   }
 
+  // flush data to disk -- idk hope this works :pray:
+  if (fsync(fd) == -1) {
+      perror("fsync");
+      close(fd);
+      return -1;
+  }
+
   // fprintf(stdout, "Writing \"%s\" to %s\n", text, fileName);
 
   if (close(fd) == -1) {

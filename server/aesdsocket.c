@@ -224,9 +224,6 @@ int main(int argc, char *argv[]) {
 
         if (buf[i] == '\n') {
           // complete packet found
-
-          // add newline if not included
-          strncat(buf, "\n", 2);
           int fr = write_to_file(packet_buf, packet_len);
           if (fr == -1) {
             perror("write");
@@ -246,7 +243,11 @@ int main(int argc, char *argv[]) {
               ssize_t bytes_sent = 0;
               while (bytes_sent < bytes_read) {
                   ssize_t n = send(new_fd, file_buf + bytes_sent, bytes_read - bytes_sent, 0);
-                  if (n == -1) { perror("send"); close(fd_send); exit(1); }
+                  if (n == -1) {
+                    perror("send"); 
+                    close(fd_send); 
+                    exit(1); 
+                  }
                   bytes_sent += n;
               }
           }

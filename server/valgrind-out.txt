@@ -1,139 +1,154 @@
-==1041254== Memcheck, a memory error detector
-==1041254== Copyright (C) 2002-2024, and GNU GPL'd, by Julian Seward et al.
-==1041254== Using Valgrind-3.25.1-4441567fbe-20250520 and LibVEX; rerun with -h for copyright info
-==1041254== Command: ./aesdsocket
-==1041254== Parent PID: 1041252
-==1041254== 
---1041254-- 
---1041254-- Valgrind options:
---1041254--    --error-exitcode=1
---1041254--    --leak-check=full
---1041254--    --show-leak-kinds=all
---1041254--    --track-origins=yes
---1041254--    --errors-for-leak-kinds=definite
---1041254--    --verbose
---1041254--    --log-file=valgrind-out.txt
---1041254-- Contents of /proc/version:
---1041254--   Linux version 6.15.9-201.fc42.x86_64 (mockbuild@fcd66b5b9bf7458aab425e003fa252bc) (gcc (GCC) 15.1.1 20250521 (Red Hat 15.1.1-2), GNU ld version 2.44-6.fc42) #1 SMP PREEMPT_DYNAMIC Sat Aug  2 11:37:34 UTC 2025
---1041254-- 
---1041254-- Arch and hwcaps: AMD64, LittleEndian, amd64-cx16-lzcnt-rdtscp-sse3-ssse3-avx-avx2-bmi-f16c-rdrand-rdseed-fma
---1041254-- Page sizes: currently 4096, max supported 4096
---1041254-- Valgrind library directory: /usr/libexec/valgrind
---1041254-- Reading syms from /home/cbull/projects/cu-boulder/ecea-5305/assignments-3-and-later-Christian-Bull/server/aesdsocket
---1041254-- Reading syms from /usr/lib64/ld-linux-x86-64.so.2
---1041254-- Warning: cross-CU LIMITATION: some inlined fn names
---1041254-- might be shown as UnknownInlinedFun
---1041254-- Reading syms from /usr/libexec/valgrind/memcheck-amd64-linux
---1041254--    object doesn't have a dynamic symbol table
---1041254-- Scheduler: using generic scheduler lock implementation.
---1041254-- Reading suppressions file: /usr/libexec/valgrind/default.supp
-==1041254== embedded gdbserver: reading from /tmp/vgdb-pipe-from-vgdb-to-1041254-by-cbull-on-cbull-fedora
-==1041254== embedded gdbserver: writing to   /tmp/vgdb-pipe-to-vgdb-from-1041254-by-cbull-on-cbull-fedora
-==1041254== embedded gdbserver: shared mem   /tmp/vgdb-pipe-shared-mem-vgdb-1041254-by-cbull-on-cbull-fedora
-==1041254== 
-==1041254== TO CONTROL THIS PROCESS USING vgdb (which you probably
-==1041254== don't want to do, unless you know exactly what you're doing,
-==1041254== or are doing some strange experiment):
-==1041254==   /usr/libexec/valgrind/../../bin/vgdb --pid=1041254 ...command...
-==1041254== 
-==1041254== TO DEBUG THIS PROCESS USING GDB: start GDB like this
-==1041254==   /path/to/gdb ./aesdsocket
-==1041254== and then give GDB the following command
-==1041254==   target remote | /usr/libexec/valgrind/../../bin/vgdb --pid=1041254
-==1041254== --pid is optional if only one valgrind process is running
-==1041254== 
-==1041254== Downloading debug info for /usr/libexec/valgrind/memcheck-amd64-linux...
---1041254--   Considering /home/cbull/.cache/debuginfod_client/754e638d7d8e5a4ee6c2b5456c053a50d89ae698/debuginfo ..
---1041254--   .. CRC is valid
-==1041254== Successfully downloaded debug file for /usr/libexec/valgrind/memcheck-amd64-linux
-==1041254== Downloading debug info for /home/cbull/.cache/debuginfod_client/754e638d7d8e5a4ee6c2b5456c053a50d89ae698/debuginfo...
---1041254--   Considering /home/cbull/.cache/debuginfod_client/3e399a29d5322d083cfee11d8bb47ad6f1ef076b/debuginfo ..
---1041254--   .. build-id is valid
-==1041254== Successfully downloaded debug file for /home/cbull/.cache/debuginfod_client/754e638d7d8e5a4ee6c2b5456c053a50d89ae698/debuginfo
---1041254-- REDIR: 0x4026960 (ld-linux-x86-64.so.2:strlen) redirected to 0x5823e2bd (vgPlain_amd64_linux_REDIR_FOR_strlen)
---1041254-- REDIR: 0x4025320 (ld-linux-x86-64.so.2:strcmp) redirected to 0x5823e2d7 (vgPlain_amd64_linux_REDIR_FOR_strcmp)
---1041254-- REDIR: 0x40250f0 (ld-linux-x86-64.so.2:index) redirected to 0x5823e310 (vgPlain_amd64_linux_REDIR_FOR_index)
---1041254-- REDIR: 0x4024480 (ld-linux-x86-64.so.2:bcmp) redirected to 0x5823e2f2 (vgPlain_amd64_linux_REDIR_FOR_memcmp)
---1041254-- Reading syms from /usr/libexec/valgrind/vgpreload_core-amd64-linux.so
---1041254-- Reading syms from /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so
-==1041254== WARNING: new redirection conflicts with existing -- ignoring it
---1041254--     old: 0x04025320 (strcmp              ) R-> (0000.0) 0x5823e2d7 vgPlain_amd64_linux_REDIR_FOR_strcmp
---1041254--     new: 0x04025320 (strcmp              ) R-> (2016.0) 0x04849970 strcmp
-==1041254== WARNING: new redirection conflicts with existing -- ignoring it
---1041254--     old: 0x04026960 (strlen              ) R-> (0000.0) 0x5823e2bd vgPlain_amd64_linux_REDIR_FOR_strlen
---1041254--     new: 0x04026960 (strlen              ) R-> (2007.0) 0x04848540 strlen
---1041254-- REDIR: 0x4024750 (ld-linux-x86-64.so.2:mempcpy) redirected to 0x484e100 (mempcpy)
---1041254-- Reading syms from /usr/lib64/libc.so.6
-==1041254== Downloading debug info for /usr/lib64/libc.so.6...
---1041254--   Considering /home/cbull/.cache/debuginfod_client/48c4b9b1efb1df15da8e787f489128bf31893317/debuginfo ..
---1041254--   .. CRC is valid
-==1041254== Successfully downloaded debug file for /usr/lib64/libc.so.6
---1041254-- REDIR: 0x4026b00 (ld-linux-x86-64.so.2:strncmp) redirected to 0x4849110 (strncmp)
---1041254-- REDIR: 0x49018c0 (libc.so.6:strnlen) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4901940 (libc.so.6:strpbrk) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x48ff980 (libc.so.6:strcmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4916af0 (libc.so.6:wcsnlen) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x48fe9e0 (libc.so.6:memset) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x49161b0 (libc.so.6:wcslen) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4978400 (libc.so.6:__memcpy_chk) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x48fe960 (libc.so.6:memrchr) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4916a80 (libc.so.6:wcsncpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x48fde70 (libc.so.6:memcpy@@GLIBC_2.14) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4914fe0 (libc.so.6:wcschr) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x48ff880 (libc.so.6:index) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4901970 (libc.so.6:rindex) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4915080 (libc.so.6:wcscmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x48fec30 (libc.so.6:stpncpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4922d60 (libc.so.6:wmemchr) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4901760 (libc.so.6:strncmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x48fec90 (libc.so.6:strcasecmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4900a60 (libc.so.6:strcspn) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4915f90 (libc.so.6:wcscpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x48ff810 (libc.so.6:strcat) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4901660 (libc.so.6:strncasecmp_l) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x48ff900 (libc.so.6:strchrnul) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x48fdd80 (libc.so.6:bcmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x49009f0 (libc.so.6:strcpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x48fed30 (libc.so.6:strcasecmp_l) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4901540 (libc.so.6:strlen) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4901800 (libc.so.6:strncpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4922de0 (libc.so.6:wmemcmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4978510 (libc.so.6:__memmove_chk) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
-==1041254== WARNING: new redirection conflicts with existing -- ignoring it
---1041254--     old: 0x049bde10 (__memcpy_chk_avx_una) R-> (2030.0) 0x0484e210 __memcpy_chk
---1041254--     new: 0x049bde10 (__memcpy_chk_avx_una) R-> (2024.0) 0x0484dae0 __memmove_chk
---1041254-- REDIR: 0x48febc0 (libc.so.6:stpcpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x48fe740 (libc.so.6:memmove) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
-==1041254== Preferring higher priority redirection:
---1041254--     old: 0x049bde40 (__memcpy_avx_unalign) R-> (2018.0) 0x0484b020 __memcpy_avx_unaligned_erms
---1041254--     new: 0x049bde40 (__memcpy_avx_unalign) R-> (2018.1) 0x0484cdb0 memmove
---1041254-- REDIR: 0x48fdd00 (libc.so.6:memchr) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4901b70 (libc.so.6:strspn) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x4914bf0 (libc.so.6:wcpncpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x48fe850 (libc.so.6:mempcpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x49015c0 (libc.so.6:strncasecmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
---1041254-- REDIR: 0x49c2a70 (libc.so.6:__strrchr_avx2) redirected to 0x4847ca0 (rindex)
---1041254-- REDIR: 0x49be840 (libc.so.6:__memset_avx2_unaligned_erms) redirected to 0x484cc80 (memset)
---1041254-- REDIR: 0x48f9b10 (libc.so.6:malloc) redirected to 0x483eab0 (malloc)
-==1041254== Downloading debug info for /home/cbull/projects/cu-boulder/ecea-5305/assignments-3-and-later-Christian-Bull/server/aesdsocket...
-==1041254== Server query failed: No such file or directory
---1041254-- REDIR: 0x49bde10 (libc.so.6:__memcpy_chk_avx_unaligned_erms) redirected to 0x484e210 (__memcpy_chk)
---1041254-- REDIR: 0x48fa260 (libc.so.6:free) redirected to 0x4841dd1 (free)
---1041254-- REDIR: 0x48fa5f0 (libc.so.6:realloc) redirected to 0x4846583 (realloc)
---1041254-- REDIR: 0x49bd6e0 (libc.so.6:__memcmp_avx2_movbe) redirected to 0x484c3a0 (bcmp)
---1041254-- REDIR: 0x49bde00 (libc.so.6:__mempcpy_avx_unaligned_erms) redirected to 0x484dcc0 (mempcpy)
---1041254-- REDIR: 0x49bde40 (libc.so.6:__memcpy_avx_unaligned_erms) redirected to 0x484cdb0 (memmove)
---1041254-- REDIR: 0x49c0220 (libc.so.6:__strchrnul_avx2) redirected to 0x484db80 (strchrnul)
---1041254-- REDIR: 0x49c0bc0 (libc.so.6:__strlen_avx2) redirected to 0x4848420 (strlen)
---1041254-- REDIR: 0x49c0970 (libc.so.6:__strcpy_avx2) redirected to 0x4848570 (strcpy)
---1041254-- REDIR: 0x49c1ca0 (libc.so.6:__strncmp_avx2) redirected to 0x4848ee0 (strncmp)
---1041254-- REDIR: 0x49bffe0 (libc.so.6:__strchr_avx2) redirected to 0x4847f20 (index)
---1041254-- REDIR: 0x49c0410 (libc.so.6:__strcmp_avx2) redirected to 0x48497f0 (strcmp)
-==1041254== 
-==1041254== HEAP SUMMARY:
-==1041254==     in use at exit: 0 bytes in 0 blocks
-==1041254==   total heap usage: 24 allocs, 24 frees, 81,072 bytes allocated
-==1041254== 
-==1041254== All heap blocks were freed -- no leaks are possible
-==1041254== 
-==1041254== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+==1047417== Memcheck, a memory error detector
+==1047417== Copyright (C) 2002-2024, and GNU GPL'd, by Julian Seward et al.
+==1047417== Using Valgrind-3.25.1-4441567fbe-20250520 and LibVEX; rerun with -h for copyright info
+==1047417== Command: ./aesdsocket
+==1047417== Parent PID: 1047415
+==1047417== 
+--1047417-- 
+--1047417-- Valgrind options:
+--1047417--    --error-exitcode=1
+--1047417--    --leak-check=full
+--1047417--    --show-leak-kinds=all
+--1047417--    --track-origins=yes
+--1047417--    --errors-for-leak-kinds=definite
+--1047417--    --verbose
+--1047417--    --log-file=valgrind-out.txt
+--1047417-- Contents of /proc/version:
+--1047417--   Linux version 6.15.9-201.fc42.x86_64 (mockbuild@fcd66b5b9bf7458aab425e003fa252bc) (gcc (GCC) 15.1.1 20250521 (Red Hat 15.1.1-2), GNU ld version 2.44-6.fc42) #1 SMP PREEMPT_DYNAMIC Sat Aug  2 11:37:34 UTC 2025
+--1047417-- 
+--1047417-- Arch and hwcaps: AMD64, LittleEndian, amd64-cx16-lzcnt-rdtscp-sse3-ssse3-avx-avx2-bmi-f16c-rdrand-rdseed-fma
+--1047417-- Page sizes: currently 4096, max supported 4096
+--1047417-- Valgrind library directory: /usr/libexec/valgrind
+--1047417-- Reading syms from /home/cbull/projects/cu-boulder/ecea-5305/assignments-3-and-later-Christian-Bull/server/aesdsocket
+--1047417-- Reading syms from /usr/lib64/ld-linux-x86-64.so.2
+--1047417-- Warning: cross-CU LIMITATION: some inlined fn names
+--1047417-- might be shown as UnknownInlinedFun
+--1047417-- Reading syms from /usr/libexec/valgrind/memcheck-amd64-linux
+--1047417--    object doesn't have a dynamic symbol table
+--1047417-- Scheduler: using generic scheduler lock implementation.
+--1047417-- Reading suppressions file: /usr/libexec/valgrind/default.supp
+==1047417== embedded gdbserver: reading from /tmp/vgdb-pipe-from-vgdb-to-1047417-by-cbull-on-cbull-fedora
+==1047417== embedded gdbserver: writing to   /tmp/vgdb-pipe-to-vgdb-from-1047417-by-cbull-on-cbull-fedora
+==1047417== embedded gdbserver: shared mem   /tmp/vgdb-pipe-shared-mem-vgdb-1047417-by-cbull-on-cbull-fedora
+==1047417== 
+==1047417== TO CONTROL THIS PROCESS USING vgdb (which you probably
+==1047417== don't want to do, unless you know exactly what you're doing,
+==1047417== or are doing some strange experiment):
+==1047417==   /usr/libexec/valgrind/../../bin/vgdb --pid=1047417 ...command...
+==1047417== 
+==1047417== TO DEBUG THIS PROCESS USING GDB: start GDB like this
+==1047417==   /path/to/gdb ./aesdsocket
+==1047417== and then give GDB the following command
+==1047417==   target remote | /usr/libexec/valgrind/../../bin/vgdb --pid=1047417
+==1047417== --pid is optional if only one valgrind process is running
+==1047417== 
+==1047417== Downloading debug info for /usr/libexec/valgrind/memcheck-amd64-linux...
+--1047417--   Considering /home/cbull/.cache/debuginfod_client/754e638d7d8e5a4ee6c2b5456c053a50d89ae698/debuginfo ..
+--1047417--   .. CRC is valid
+==1047417== Successfully downloaded debug file for /usr/libexec/valgrind/memcheck-amd64-linux
+==1047417== Downloading debug info for /home/cbull/.cache/debuginfod_client/754e638d7d8e5a4ee6c2b5456c053a50d89ae698/debuginfo...
+--1047417--   Considering /home/cbull/.cache/debuginfod_client/3e399a29d5322d083cfee11d8bb47ad6f1ef076b/debuginfo ..
+--1047417--   .. build-id is valid
+==1047417== Successfully downloaded debug file for /home/cbull/.cache/debuginfod_client/754e638d7d8e5a4ee6c2b5456c053a50d89ae698/debuginfo
+--1047417-- REDIR: 0x4026960 (ld-linux-x86-64.so.2:strlen) redirected to 0x5823e2bd (vgPlain_amd64_linux_REDIR_FOR_strlen)
+--1047417-- REDIR: 0x4025320 (ld-linux-x86-64.so.2:strcmp) redirected to 0x5823e2d7 (vgPlain_amd64_linux_REDIR_FOR_strcmp)
+--1047417-- REDIR: 0x40250f0 (ld-linux-x86-64.so.2:index) redirected to 0x5823e310 (vgPlain_amd64_linux_REDIR_FOR_index)
+--1047417-- REDIR: 0x4024480 (ld-linux-x86-64.so.2:bcmp) redirected to 0x5823e2f2 (vgPlain_amd64_linux_REDIR_FOR_memcmp)
+--1047417-- Reading syms from /usr/libexec/valgrind/vgpreload_core-amd64-linux.so
+--1047417-- Reading syms from /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so
+==1047417== WARNING: new redirection conflicts with existing -- ignoring it
+--1047417--     old: 0x04025320 (strcmp              ) R-> (0000.0) 0x5823e2d7 vgPlain_amd64_linux_REDIR_FOR_strcmp
+--1047417--     new: 0x04025320 (strcmp              ) R-> (2016.0) 0x04849970 strcmp
+==1047417== WARNING: new redirection conflicts with existing -- ignoring it
+--1047417--     old: 0x04026960 (strlen              ) R-> (0000.0) 0x5823e2bd vgPlain_amd64_linux_REDIR_FOR_strlen
+--1047417--     new: 0x04026960 (strlen              ) R-> (2007.0) 0x04848540 strlen
+--1047417-- REDIR: 0x4024750 (ld-linux-x86-64.so.2:mempcpy) redirected to 0x484e100 (mempcpy)
+--1047417-- Reading syms from /usr/lib64/libc.so.6
+==1047417== Downloading debug info for /usr/lib64/libc.so.6...
+--1047417--   Considering /home/cbull/.cache/debuginfod_client/48c4b9b1efb1df15da8e787f489128bf31893317/debuginfo ..
+--1047417--   .. CRC is valid
+==1047417== Successfully downloaded debug file for /usr/lib64/libc.so.6
+--1047417-- REDIR: 0x4026b00 (ld-linux-x86-64.so.2:strncmp) redirected to 0x4849110 (strncmp)
+--1047417-- REDIR: 0x49018c0 (libc.so.6:strnlen) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4901940 (libc.so.6:strpbrk) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x48ff980 (libc.so.6:strcmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4916af0 (libc.so.6:wcsnlen) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x48fe9e0 (libc.so.6:memset) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x49161b0 (libc.so.6:wcslen) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4978400 (libc.so.6:__memcpy_chk) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x48fe960 (libc.so.6:memrchr) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4916a80 (libc.so.6:wcsncpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x48fde70 (libc.so.6:memcpy@@GLIBC_2.14) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4914fe0 (libc.so.6:wcschr) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x48ff880 (libc.so.6:index) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4901970 (libc.so.6:rindex) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4915080 (libc.so.6:wcscmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x48fec30 (libc.so.6:stpncpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4922d60 (libc.so.6:wmemchr) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4901760 (libc.so.6:strncmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x48fec90 (libc.so.6:strcasecmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4900a60 (libc.so.6:strcspn) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4915f90 (libc.so.6:wcscpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x48ff810 (libc.so.6:strcat) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4901660 (libc.so.6:strncasecmp_l) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x48ff900 (libc.so.6:strchrnul) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x48fdd80 (libc.so.6:bcmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x49009f0 (libc.so.6:strcpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x48fed30 (libc.so.6:strcasecmp_l) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4901540 (libc.so.6:strlen) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4901800 (libc.so.6:strncpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4922de0 (libc.so.6:wmemcmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4978510 (libc.so.6:__memmove_chk) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+==1047417== WARNING: new redirection conflicts with existing -- ignoring it
+--1047417--     old: 0x049bde10 (__memcpy_chk_avx_una) R-> (2030.0) 0x0484e210 __memcpy_chk
+--1047417--     new: 0x049bde10 (__memcpy_chk_avx_una) R-> (2024.0) 0x0484dae0 __memmove_chk
+--1047417-- REDIR: 0x48febc0 (libc.so.6:stpcpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x48fe740 (libc.so.6:memmove) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+==1047417== Preferring higher priority redirection:
+--1047417--     old: 0x049bde40 (__memcpy_avx_unalign) R-> (2018.0) 0x0484b020 __memcpy_avx_unaligned_erms
+--1047417--     new: 0x049bde40 (__memcpy_avx_unalign) R-> (2018.1) 0x0484cdb0 memmove
+--1047417-- REDIR: 0x48fdd00 (libc.so.6:memchr) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4901b70 (libc.so.6:strspn) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x4914bf0 (libc.so.6:wcpncpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x48fe850 (libc.so.6:mempcpy) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x49015c0 (libc.so.6:strncasecmp) redirected to 0x483a4ba (_vgnU_ifunc_wrapper)
+--1047417-- REDIR: 0x49c2a70 (libc.so.6:__strrchr_avx2) redirected to 0x4847ca0 (rindex)
+--1047417-- REDIR: 0x49be840 (libc.so.6:__memset_avx2_unaligned_erms) redirected to 0x484cc80 (memset)
+--1047417-- REDIR: 0x48f9b10 (libc.so.6:malloc) redirected to 0x483eab0 (malloc)
+==1047417== Downloading debug info for /home/cbull/projects/cu-boulder/ecea-5305/assignments-3-and-later-Christian-Bull/server/aesdsocket...
+==1047417== Server query failed: No such file or directory
+--1047417-- REDIR: 0x49bde10 (libc.so.6:__memcpy_chk_avx_unaligned_erms) redirected to 0x484e210 (__memcpy_chk)
+--1047417-- REDIR: 0x48fa260 (libc.so.6:free) redirected to 0x4841dd1 (free)
+--1047417-- REDIR: 0x48fa5f0 (libc.so.6:realloc) redirected to 0x4846583 (realloc)
+--1047417-- REDIR: 0x49bd6e0 (libc.so.6:__memcmp_avx2_movbe) redirected to 0x484c3a0 (bcmp)
+--1047417-- REDIR: 0x49bde00 (libc.so.6:__mempcpy_avx_unaligned_erms) redirected to 0x484dcc0 (mempcpy)
+--1047417-- REDIR: 0x49bde40 (libc.so.6:__memcpy_avx_unaligned_erms) redirected to 0x484cdb0 (memmove)
+--1047417-- REDIR: 0x49c0220 (libc.so.6:__strchrnul_avx2) redirected to 0x484db80 (strchrnul)
+--1047417-- REDIR: 0x49c0bc0 (libc.so.6:__strlen_avx2) redirected to 0x4848420 (strlen)
+--1047417-- REDIR: 0x49c0970 (libc.so.6:__strcpy_avx2) redirected to 0x4848570 (strcpy)
+--1047417-- REDIR: 0x49c1ca0 (libc.so.6:__strncmp_avx2) redirected to 0x4848ee0 (strncmp)
+--1047417-- REDIR: 0x49bffe0 (libc.so.6:__strchr_avx2) redirected to 0x4847f20 (index)
+--1047417-- REDIR: 0x49c0410 (libc.so.6:__strcmp_avx2) redirected to 0x48497f0 (strcmp)
+==1047417== Conditional jump or move depends on uninitialised value(s)
+==1047417==    at 0x4848438: strlen (vg_replace_strmem.c:506)
+==1047417==    by 0x400D7D: main (in /home/cbull/projects/cu-boulder/ecea-5305/assignments-3-and-later-Christian-Bull/server/aesdsocket)
+==1047417==  Uninitialised value was created by a stack allocation
+==1047417==    at 0x4008EE: main (in /home/cbull/projects/cu-boulder/ecea-5305/assignments-3-and-later-Christian-Bull/server/aesdsocket)
+==1047417== 
+==1047417== 
+==1047417== HEAP SUMMARY:
+==1047417==     in use at exit: 0 bytes in 0 blocks
+==1047417==   total heap usage: 24 allocs, 24 frees, 81,072 bytes allocated
+==1047417== 
+==1047417== All heap blocks were freed -- no leaks are possible
+==1047417== 
+==1047417== ERROR SUMMARY: 5 errors from 1 contexts (suppressed: 0 from 0)
+==1047417== 
+==1047417== 5 errors in context 1 of 1:
+==1047417== Conditional jump or move depends on uninitialised value(s)
+==1047417==    at 0x4848438: strlen (vg_replace_strmem.c:506)
+==1047417==    by 0x400D7D: main (in /home/cbull/projects/cu-boulder/ecea-5305/assignments-3-and-later-Christian-Bull/server/aesdsocket)
+==1047417==  Uninitialised value was created by a stack allocation
+==1047417==    at 0x4008EE: main (in /home/cbull/projects/cu-boulder/ecea-5305/assignments-3-and-later-Christian-Bull/server/aesdsocket)
+==1047417== 
+==1047417== ERROR SUMMARY: 5 errors from 1 contexts (suppressed: 0 from 0)

@@ -223,6 +223,9 @@ int main(int argc, char *argv[]) {
 
         if (buf[i] == '\n') {
           // complete packet found
+
+          // add newline if not included
+          strncat(buf, "\n", 1);
           int fr = write_to_file(packet_buf, packet_len);
           if (fr == -1) {
             perror("write");

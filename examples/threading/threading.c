@@ -67,6 +67,7 @@ bool start_thread_obtaining_mutex(pthread_t *thread, pthread_mutex_t *mutex,
    * See implementation details in threading.h file comment block
    */
 
+  
   struct thread_data *thread_d = malloc(sizeof(struct thread_data));
   
   thread_d->wait_to_obtain_ms = wait_to_obtain_ms;
@@ -80,21 +81,21 @@ bool start_thread_obtaining_mutex(pthread_t *thread, pthread_mutex_t *mutex,
     return false;
   }
 
-  int rcx = pthread_join(*thread, NULL);
-  if (rcx != 0) {
-    printf("pthread_join failed with error %d\n", rcx);
-    return false;
-  }
+  // int rcx = pthread_join(*thread, NULL);
+  // if (rcx != 0) {
+  //   printf("pthread_join failed with error %d\n", rcx);
+  //   return false;
+  // }
 
   printf("thread completed\n");
-  free(thread_d);
+  // free(thread_d);
 
   return true;
 }
 
 // int main() {
 
-//   pthread_t *thread;
+//   pthread_t *thread = malloc(sizeof(pthread_t));
 //   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 //   int wait = 1000;

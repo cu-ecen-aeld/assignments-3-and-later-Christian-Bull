@@ -15,7 +15,7 @@
 
 const char *fileName = "/var/tmp/aesdsocketdata";
 
-int write_to_file(const char *text) {
+int write_to_file(const char *data, size_t len) {
   int fd;
   ssize_t nr;
 
@@ -26,7 +26,7 @@ int write_to_file(const char *text) {
     return -1;
   }
 
-  nr = write(fd, text, strlen(text));
+  nr = write(fd, data, len);
   if (nr == -1) {
     perror("write");
     fprintf(stderr, "Error: Writing to file %s failed\n", fileName);
@@ -34,16 +34,7 @@ int write_to_file(const char *text) {
     return -1;
   }
 
-  fprintf(stdout, "Writing \"%s\" to %s\n", text, fileName);
-
-  // add newline, messy but avoids appending text
-  nr = write(fd, "\n", 1);
-  if (nr == -1) {
-    perror("write");
-    fprintf(stderr, "Error: Writing newline to file %s failed\n", fileName);
-    close(fd);
-    return -1;
-  }
+  // fprintf(stdout, "Writing \"%s\" to %s\n", text, fileName);
 
   if (close(fd) == -1) {
     perror("close");
@@ -153,18 +144,55 @@ int main(void) {
     printf("server: got connection from %s\n", s);
     syslog(LOG_INFO, "Accepted connection from %s", s);
 
-    while ((bytes_received = recv(new_fd, buf, sizeof(buf), 0)) > 0) {
-        ssize_t nr = write(fd, buf, bytes_received);
-        if (nr == -1) {
-            perror("write");
-            break;
-        }
-    }
+    char buf[1024];
+    ssize_t bytes_received;
+    char *packet_buf = NULL;
+    size_t packet_len = 0;
+    size_t packet_size = 0;
 
-    // write connection IP to file
-    if (write_to_file(s) == -1) {
-      fprintf(stderr, "writing connection info to file failed");
-      exit(1);
+    while ((bytes_received = recv(new_fd, buf, sizeof(buf), 0)) > 0) {
+      for (ssize_t i = 0; i < bytes_received; i++) {
+        if (packet_len + 1 > packet_size) {
+          // grow buffer
+          size_t new_size = packet_size ? packet_size * 2 : 1024;
+          char *tmp = realloc(packet_buf, new_size);
+          if (!tmp) {
+            perror("realloc");
+            free(packet_buf);
+            break;
+          }
+          packet_buf = tmp;
+          packet_size = new_size;
+        }
+
+        packet_buf[packet_len++] = buf[i];
+
+        if (buf[i] == '\n') {
+          // complete packet found
+          int fr = write_to_file(packet_buf, packet_len);
+          if (fr == -1) {
+            perror("write");
+          }
+
+          // send back contents of file
+          int fd_send = open(fileName, O_RDONLY);
+          if (fd_send == -1) {
+            perror("Error opening file");
+            break;
+          }
+          char file_buf[1024];
+          ssize_t nread;
+          while ((nread = read(fd_send, file_buf, sizeof(file_buf))) > 0) {
+            if (send(new_fd, file_buf, nread, 0) == -1) {
+              perror("Error sending contents of file");
+              break;
+            }
+          }
+          close(fd_send);
+
+          packet_len = 0;
+        }
+      }
     }
 
     close(new_fd); // parent doesn't need this

@@ -1,5 +1,4 @@
 CC      = gcc
-CFLAGS  = -g
 RM      = rm -f
 LOG_FILE = /var/tmp/aesdsocketdata
 

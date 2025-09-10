@@ -88,7 +88,12 @@ void setup_signal_handlers(void) {
   }
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+  int daemon = 0;
+  if (argc == 2 && strcmp(argv[1], "-d") == 0) {
+    daemon = 1;
+  }
+
   struct sockaddr_storage their_addr;
   socklen_t addr_size;
   struct addrinfo hints, *res;
@@ -120,6 +125,37 @@ int main(void) {
     fprintf(stderr, "gai error: %s\n", gai_strerror(bind_status));
     exit(1);
     return -1;
+  }
+
+  // fork after binding
+  if (daemon) {
+    pid_t pid = fork();
+    if (pid < 0) {
+      perror("fork");
+      exit(EXIT_FAILURE);
+    }
+    if (pid > 0) {
+      // parent exits
+      exit(EXIT_SUCCESS);
+    }
+
+    if (setsid() < 0) { // create new session
+      perror("setsid");
+      exit(EXIT_FAILURE);
+    }
+
+    if (chdir("/") < 0) {
+      perror("chdir");
+      exit(EXIT_FAILURE);
+    }
+
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+
+    open("/dev/null", O_RDONLY); // stdin
+    open("/dev/null", O_WRONLY); // stdout
+    open("/dev/null", O_RDWR);   // stderr
   }
 
   if (listen(sockfd, BACKLOG) == -1) {
@@ -180,12 +216,19 @@ int main(void) {
             perror("Error opening file");
             break;
           }
+
           char file_buf[1024];
           ssize_t nread;
           while ((nread = read(fd_send, file_buf, sizeof(file_buf))) > 0) {
-            if (send(new_fd, file_buf, nread, 0) == -1) {
-              perror("Error sending contents of file");
-              break;
+            ssize_t total_sent = 0;
+            while (total_sent < nread) {
+              ssize_t nsent =
+                  send(new_fd, file_buf + total_sent, nread - total_sent, 0);
+              if (nsent <= 0) {
+                close(fd_send);
+                break;
+              }
+              total_sent += nsent;
             }
           }
           close(fd_send);

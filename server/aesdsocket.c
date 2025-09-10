@@ -94,6 +94,13 @@ int main(int argc, char *argv[]) {
     daemon = 1;
   }
 
+  int fd_clear = open(fileName, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  if (fd_clear == -1) {
+    perror("Failed to clear file");
+  } else {
+    close(fd_clear);
+  }
+
   struct sockaddr_storage their_addr;
   socklen_t addr_size;
   struct addrinfo hints, *res;
@@ -126,6 +133,8 @@ int main(int argc, char *argv[]) {
     exit(1);
     return -1;
   }
+
+  freeaddrinfo(servinfo);
 
   // fork after binding
   if (daemon) {
@@ -193,9 +202,11 @@ int main(int argc, char *argv[]) {
           size_t new_size = packet_size ? packet_size * 2 : 1024;
           char *tmp = realloc(packet_buf, new_size);
           if (!tmp) {
-            perror("realloc");
-            free(packet_buf);
-            break;
+              perror("realloc");
+              free(packet_buf);
+              packet_buf = NULL;
+              packet_len = 0;
+              goto client_done;
           }
           packet_buf = tmp;
           packet_size = new_size;
@@ -237,7 +248,13 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-
-    close(new_fd); // parent doesn't need this
+    client_done:
+    if (packet_buf) {
+        free(packet_buf);
+        packet_buf = NULL;
+        packet_len = 0;
+        packet_size = 0;
+    }
+    close(new_fd);  // close this client connection
   }
 }

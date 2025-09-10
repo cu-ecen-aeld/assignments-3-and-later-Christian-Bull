@@ -12,6 +12,7 @@
 #include <unistd.h>
 #define PORT "9000" // the port users will be connecting to
 #define BACKLOG 10  // how many pending connections queue holds
+#define FILE_BUF_SIZE 1024
 
 const char *fileName = "/var/tmp/aesdsocketdata";
 
@@ -196,7 +197,7 @@ int main(int argc, char *argv[]) {
     printf("server: got connection from %s\n", s);
     syslog(LOG_INFO, "Accepted connection from %s", s);
 
-    char buf[1024];
+    char buf[1024] = {0};
     ssize_t bytes_received;
     char *packet_buf = NULL;
     size_t packet_len = 0;
@@ -225,7 +226,7 @@ int main(int argc, char *argv[]) {
           // complete packet found
 
           // add newline if not included
-          strncat(buf, "\n", 1);
+          strncat(buf, "\n", 2);
           int fr = write_to_file(packet_buf, packet_len);
           if (fr == -1) {
             perror("write");
@@ -238,19 +239,16 @@ int main(int argc, char *argv[]) {
             break;
           }
 
-          char file_buf[1024];
-          ssize_t nread;
-          while ((nread = read(fd_send, file_buf, sizeof(file_buf))) > 0) {
-            ssize_t total_sent = 0;
-            while (total_sent < nread) {
-              ssize_t nsent =
-                  send(new_fd, file_buf + total_sent, nread - total_sent, 0);
-              if (nsent <= 0) {
-                close(fd_send);
-                break;
+          char file_buf[FILE_BUF_SIZE];
+          ssize_t bytes_read;
+
+          while ((bytes_read = read(fd_send, file_buf, FILE_BUF_SIZE)) > 0) {
+              ssize_t bytes_sent = 0;
+              while (bytes_sent < bytes_read) {
+                  ssize_t n = send(new_fd, file_buf + bytes_sent, bytes_read - bytes_sent, 0);
+                  if (n == -1) { perror("send"); close(fd_send); exit(1); }
+                  bytes_sent += n;
               }
-              total_sent += nsent;
-            }
           }
           close(fd_send);
 

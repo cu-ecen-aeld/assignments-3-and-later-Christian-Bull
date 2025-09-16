@@ -10,6 +10,7 @@
 #include <sys/syslog.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "queue.h" // queue taken from FreeBSD 10c
 #define PORT "9000" // the port users will be connecting to
 #define BACKLOG 10  // how many pending connections queue holds
 #define FILE_BUF_SIZE 1024
@@ -191,6 +192,25 @@ int main(int argc, char *argv[]) {
       perror("accept");
       continue;
     }
+
+    // spawn thread here
+    // use linked lists to track threads
+    // accept connection
+    // create thread
+    // for thread in list
+    //    thread completed?
+    //    pthread_join
+
+    // send and recieve threads 
+    // recieve on socket
+    // send on socket
+    // set complete flag and exit
+
+    // use mutex when writing to file
+
+    // deallocate memory only in one place, from main process
+    // queue.h linked lists
+
 
     inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr),
               s, sizeof s);

@@ -1,3 +1,5 @@
+#include "aesdsocket.h"
+#include "queue.h" // queue taken from FreeBSD 10c
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -10,7 +12,6 @@
 #include <sys/syslog.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "queue.h" // queue taken from FreeBSD 10c
 #define PORT "9000" // the port users will be connecting to
 #define BACKLOG 10  // how many pending connections queue holds
 #define FILE_BUF_SIZE 1024
@@ -38,9 +39,9 @@ int write_to_file(const char *data, size_t len) {
 
   // flush data to disk -- idk hope this works :pray:
   if (fsync(fd) == -1) {
-      perror("fsync");
-      close(fd);
-      return -1;
+    perror("fsync");
+    close(fd);
+    return -1;
   }
 
   // fprintf(stdout, "Writing \"%s\" to %s\n", text, fileName);
@@ -97,11 +98,153 @@ void setup_signal_handlers(void) {
   }
 }
 
+void *handle_connection(void *connection_param) {
+
+  // take connection parameters and input into struct
+  struct thread_data *thread_func_args = (struct thread_data *)connection_param;
+
+  struct sockaddr_storage their_addr;
+  socklen_t addr_size;
+  addr_size = sizeof their_addr;
+  char s[INET6_ADDRSTRLEN];
+
+  syslog(LOG_INFO, "Starting connection handling thread");
+
+  inet_ntop(thread_func_args->client_addr.ss_family,
+            get_in_addr((struct sockaddr *)&thread_func_args->client_addr), s,
+            sizeof(s));
+
+  printf("server: got connection from %s\n", s);
+  syslog(LOG_INFO, "Accepted connection from %s", s);
+
+  char buf[1024] = {0};
+  ssize_t bytes_received;
+  char *packet_buf = NULL;
+  size_t packet_len = 0;
+  size_t packet_size = 0;
+
+  while ((bytes_received =
+              recv(thread_func_args->client_fd, buf, sizeof(buf), 0)) > 0) {
+    for (ssize_t i = 0; i < bytes_received; i++) {
+      if (packet_len + 1 > packet_size) {
+        // grow buffer
+        size_t new_size = packet_size ? packet_size * 2 : 1024;
+        char *tmp = realloc(packet_buf, new_size);
+        if (!tmp) {
+          perror("realloc");
+          free(packet_buf);
+          packet_buf = NULL;
+          packet_len = 0;
+          goto client_done;
+        }
+        packet_buf = tmp;
+        packet_size = new_size;
+      }
+
+      packet_buf[packet_len++] = buf[i];
+
+      if (buf[i] == '\n') {
+        // complete packet found
+
+        pthread_mutex_lock(thread_func_args->mutex);
+
+        int fr = write_to_file(packet_buf, packet_len);
+        if (fr == -1) {
+          perror("write");
+          pthread_mutex_unlock(thread_func_args->mutex);
+        }
+
+        // send back contents of file
+        int fd_send = open(fileName, O_RDONLY);
+        if (fd_send == -1) {
+          perror("Error opening file");
+          pthread_mutex_unlock(thread_func_args->mutex);
+          break;
+        }
+
+        char file_buf[FILE_BUF_SIZE];
+        ssize_t bytes_read;
+
+        while ((bytes_read = read(fd_send, file_buf, FILE_BUF_SIZE)) > 0) {
+          ssize_t bytes_sent = 0;
+          while (bytes_sent < bytes_read) {
+            ssize_t n = send(thread_func_args->client_fd, file_buf + bytes_sent,
+                             bytes_read - bytes_sent, 0);
+            if (n == -1) {
+              perror("send");
+              close(fd_send);
+              exit(1);
+              pthread_mutex_unlock(thread_func_args->mutex);
+            }
+            bytes_sent += n;
+          }
+        }
+        close(fd_send);
+
+        // unlock mutex
+        pthread_mutex_unlock(thread_func_args->mutex);
+
+        packet_len = 0;
+      }
+    }
+  }
+client_done:
+  if (packet_buf) {
+    free(packet_buf);
+    packet_buf = NULL;
+    packet_len = 0;
+    packet_size = 0;
+    thread_func_args->thread_complete_success = true;
+  }
+  close(thread_func_args->client_fd); // close this client connection
+
+  return thread_func_args;
+}
+
+void *timestamp_thread(void *arg) {
+    pthread_mutex_t *mutex = (pthread_mutex_t *)arg;
+
+    while (1) {
+        sleep(10);
+
+        time_t now = time(NULL);
+        struct tm *t = localtime(&now);
+        char time_str[64];
+        strftime(time_str, sizeof(time_str), "timestamp:%Y-%m-%d %H:%M:%S\n", t);
+
+        pthread_mutex_lock(mutex);
+
+        if (write_to_file(time_str, strlen(time_str)) == -1) {
+            syslog(LOG_ERR, "Error writing timestamp to file");
+        }
+
+        pthread_mutex_unlock(mutex);
+    }
+    return NULL;
+}
+
 int main(int argc, char *argv[]) {
+
+  openlog("aesdsocket", LOG_PID | LOG_CONS, LOG_DAEMON);
+
+  pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+  // output time to file every 10 seconds
+  pthread_t ts_thread;
+  if (pthread_create(&ts_thread, NULL, timestamp_thread, &global_mutex) != 0) {
+      perror("Error creating timestamp thread");
+      exit(1);
+  }
+
   int daemon = 0;
   if (argc == 2 && strcmp(argv[1], "-d") == 0) {
     daemon = 1;
   }
+
+  // for tracking threads
+  TAILQ_HEAD(thread_list, thread_data);
+  struct thread_list active_threads;
+  TAILQ_INIT(&active_threads);
 
   int fd_clear = open(fileName, O_WRONLY | O_CREAT | O_TRUNC, 0644);
   if (fd_clear == -1) {
@@ -193,15 +336,46 @@ int main(int argc, char *argv[]) {
       continue;
     }
 
-    // spawn thread here
+    // setup thread
+    struct thread_data *tdata = malloc(sizeof(*tdata));
+
+    tdata->mutex = &global_mutex;
+    tdata->thread = malloc(sizeof(pthread_t));
+    tdata->thread_complete_success = false;
+    tdata->client_fd = new_fd;
+    memcpy(&tdata->client_addr, &their_addr, addr_size);
+    tdata->addr_len = addr_size;
+
+    int rc = pthread_create(tdata->thread, NULL, handle_connection, tdata);
+    if (rc != 0) {
+      syslog(LOG_ERR, "Creating thread failed");
+      perror("pthread_create");
+      close(new_fd);
+      free(tdata);
+      return false;
+    }
+
+    TAILQ_INSERT_TAIL(&active_threads, tdata, entries);
+
+    // loop through threads
+    struct thread_data *item, *tmp;
+
+    TAILQ_FOREACH_SAFE(item, &active_threads, entries, tmp) {
+        if (item->thread_complete_success) {
+            pthread_join(*item->thread, NULL);
+            TAILQ_REMOVE(&active_threads, item, entries);
+            free(item->thread);
+            free(item);
+        }
+    }
+
     // use linked lists to track threads
-    // accept connection
     // create thread
     // for thread in list
     //    thread completed?
     //    pthread_join
 
-    // send and recieve threads 
+    // send and recieve threads
     // recieve on socket
     // send on socket
     // set complete flag and exit
@@ -210,80 +384,5 @@ int main(int argc, char *argv[]) {
 
     // deallocate memory only in one place, from main process
     // queue.h linked lists
-
-
-    inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr),
-              s, sizeof s);
-    printf("server: got connection from %s\n", s);
-    syslog(LOG_INFO, "Accepted connection from %s", s);
-
-    char buf[1024] = {0};
-    ssize_t bytes_received;
-    char *packet_buf = NULL;
-    size_t packet_len = 0;
-    size_t packet_size = 0;
-
-    while ((bytes_received = recv(new_fd, buf, sizeof(buf), 0)) > 0) {
-      for (ssize_t i = 0; i < bytes_received; i++) {
-        if (packet_len + 1 > packet_size) {
-          // grow buffer
-          size_t new_size = packet_size ? packet_size * 2 : 1024;
-          char *tmp = realloc(packet_buf, new_size);
-          if (!tmp) {
-              perror("realloc");
-              free(packet_buf);
-              packet_buf = NULL;
-              packet_len = 0;
-              goto client_done;
-          }
-          packet_buf = tmp;
-          packet_size = new_size;
-        }
-
-        packet_buf[packet_len++] = buf[i];
-
-        if (buf[i] == '\n') {
-          // complete packet found
-          int fr = write_to_file(packet_buf, packet_len);
-          if (fr == -1) {
-            perror("write");
-          }
-
-          // send back contents of file
-          int fd_send = open(fileName, O_RDONLY);
-          if (fd_send == -1) {
-            perror("Error opening file");
-            break;
-          }
-
-          char file_buf[FILE_BUF_SIZE];
-          ssize_t bytes_read;
-
-          while ((bytes_read = read(fd_send, file_buf, FILE_BUF_SIZE)) > 0) {
-              ssize_t bytes_sent = 0;
-              while (bytes_sent < bytes_read) {
-                  ssize_t n = send(new_fd, file_buf + bytes_sent, bytes_read - bytes_sent, 0);
-                  if (n == -1) {
-                    perror("send"); 
-                    close(fd_send); 
-                    exit(1); 
-                  }
-                  bytes_sent += n;
-              }
-          }
-          close(fd_send);
-
-          packet_len = 0;
-        }
-      }
-    }
-    client_done:
-    if (packet_buf) {
-        free(packet_buf);
-        packet_buf = NULL;
-        packet_len = 0;
-        packet_size = 0;
-    }
-    close(new_fd);  // close this client connection
   }
 }

@@ -22,6 +22,8 @@ int write_to_file(const char *data, size_t len) {
   int fd;
   ssize_t nr;
 
+  syslog(LOG_INFO, "Writing to file");
+
   fd = open(fileName, O_RDWR | O_CREAT | O_APPEND, 0644); // append to file
   if (fd == -1) {
     perror("open");
@@ -68,6 +70,8 @@ void *get_in_addr(struct sockaddr *sa) {
 }
 
 int sockfd = -1; // global listening socket
+pthread_t ts_thread; // global timestamp thread
+
 
 // signal handler
 void handle_signal(int sig) {
@@ -190,19 +194,23 @@ void *handle_connection(void *connection_param) {
   }
 client_done:
   if (packet_buf) {
+    syslog(LOG_INFO, "Closing client connection from %s", s);
+
     free(packet_buf);
     packet_buf = NULL;
     packet_len = 0;
     packet_size = 0;
     thread_func_args->thread_complete_success = true;
   }
-  close(thread_func_args->client_fd); // close this client connection
+  close(thread_func_args->client_fd);
 
   return thread_func_args;
 }
 
 void *timestamp_thread(void *arg) {
     pthread_mutex_t *mutex = (pthread_mutex_t *)arg;
+
+    syslog(LOG_INFO, "Starting timestamp thread");
 
     while (1) {
         sleep(10);
@@ -211,6 +219,8 @@ void *timestamp_thread(void *arg) {
         struct tm *t = localtime(&now);
         char time_str[64];
         strftime(time_str, sizeof(time_str), "timestamp:%Y-%m-%d %H:%M:%S\n", t);
+
+        syslog(LOG_INFO, "Logging time to file %s", time_str);
 
         pthread_mutex_lock(mutex);
 
@@ -228,13 +238,6 @@ int main(int argc, char *argv[]) {
   openlog("aesdsocket", LOG_PID | LOG_CONS, LOG_DAEMON);
 
   pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-  // output time to file every 10 seconds
-  pthread_t ts_thread;
-  if (pthread_create(&ts_thread, NULL, timestamp_thread, &global_mutex) != 0) {
-      perror("Error creating timestamp thread");
-      exit(1);
-  }
 
   int daemon = 0;
   if (argc == 2 && strcmp(argv[1], "-d") == 0) {
@@ -325,6 +328,13 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   fprintf(stdout, "Server listening on port %s\n", PORT);
+
+  // output time to file every 10 seconds
+  pthread_t ts_thread;
+  if (pthread_create(&ts_thread, NULL, timestamp_thread, &global_mutex) != 0) {
+      perror("Error creating timestamp thread");
+      exit(1);
+  }
 
   // now accept an incoming connection:
   while (1) {

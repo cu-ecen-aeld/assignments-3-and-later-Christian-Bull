@@ -107,9 +107,9 @@ void *handle_connection(void *connection_param) {
   // take connection parameters and input into struct
   struct thread_data *thread_func_args = (struct thread_data *)connection_param;
 
-  struct sockaddr_storage their_addr;
-  socklen_t addr_size;
-  addr_size = sizeof their_addr;
+  // struct sockaddr_storage their_addr;
+  // socklen_t addr_size;
+  // addr_size = sizeof their_addr;
   char s[INET6_ADDRSTRLEN];
 
   syslog(LOG_INFO, "Starting connection handling thread");
@@ -261,7 +261,6 @@ int main(int argc, char *argv[]) {
   struct addrinfo hints, *res;
   int sockfd, new_fd;
   struct addrinfo *servinfo;
-  char s[INET6_ADDRSTRLEN];
 
   setup_signal_handlers();
 
@@ -378,21 +377,5 @@ int main(int argc, char *argv[]) {
             free(item);
         }
     }
-
-    // use linked lists to track threads
-    // create thread
-    // for thread in list
-    //    thread completed?
-    //    pthread_join
-
-    // send and recieve threads
-    // recieve on socket
-    // send on socket
-    // set complete flag and exit
-
-    // use mutex when writing to file
-
-    // deallocate memory only in one place, from main process
-    // queue.h linked lists
   }
 }

@@ -1,4 +1,6 @@
-CC      = gcc
+CC      ?= $(CROSS_COMPILE)gcc
+CFLAGS  ?= -g -Wall -Werror
+LDFLAGS ?= -lpthread -lrt
 RM      = rm -f
 LOG_FILE = /var/tmp/aesdsocketdata
 
@@ -7,7 +9,7 @@ default: all
 all: aesdsocket
 
 aesdsocket: aesdsocket.c
-	$(CROSS_COMPILE)$(CC) $(CFLAGS) -o aesdsocket aesdsocket.c
+	$(CC) $(CFLAGS) -o aesdsocket $(INCLUDES) $(LDFLAGS) aesdsocket.c
 
 clean veryclean:
 	$(RM) aesdsocket

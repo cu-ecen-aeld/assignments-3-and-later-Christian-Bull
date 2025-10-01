@@ -18,10 +18,11 @@
 #include <linux/cdev.h>
 #include <linux/fs.h> // file_operations
 #include "aesdchar.h"
+#include "aesd-circular-buffer.h"
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
 
-MODULE_AUTHOR("Your Name Here"); /** TODO: fill in your name **/
+MODULE_AUTHOR("Christian Bull");
 MODULE_LICENSE("Dual BSD/GPL");
 
 struct aesd_dev aesd_device;
@@ -62,6 +63,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
     /**
      * TODO: handle write
+     * Handle write operation, newline signals complete write
+     * save most recent 10 write commands - use circular buffer we already developed
      */
     return retval;
 }
@@ -105,13 +108,38 @@ int aesd_init_module(void)
     /**
      * TODO: initialize the AESD specific portion of the device
      */
-
     result = aesd_setup_cdev(&aesd_device);
 
-    if( result ) {
+    if ( result ) {
+        printk(KERN_WARNING "Error setting up aesd dev %d\n", result);
         unregister_chrdev_region(dev, 1);
+        return result;
     }
+
+    // create class
+    struct class *my_class = class_create(THIS_MODULE, CLASS_NAME);
+    if (IS_ERR(my_class)) {
+        cdev_del(&aesd_device);
+        unregister_chrdev_region(dev, 1);
+        printk(KERN_WARNING "Error creating class");
+        return PTR_ERR(my_class);
+    }
+
+    // create device node in /dev
+    struct my_device = device_create(my_class, NULL, dev_num, NULL, DEVICE_NAME);
+    if (IS_ERR(my_device)) {
+        class_destroy(my_class);
+        cdev_del(&aesd_device);
+        unregister_chrdev_region(dev, 1);
+        printk(KERN_WARNING "Failed to create device");
+        return PTR_ERR(&aesd_device);
+    }
+
+    
     return result;
+
+
+    
 
 }
 

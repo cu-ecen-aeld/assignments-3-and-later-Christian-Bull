@@ -11,6 +11,7 @@
  *
  */
 
+#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/printk.h>
@@ -30,9 +31,12 @@ struct aesd_dev aesd_device;
 int aesd_open(struct inode *inode, struct file *filp)
 {
     PDEBUG("open");
-    /**
-     * TODO: handle open
-     */
+    
+    struct aesd_dev *dev;
+
+    dev = container_of(inode->i_cdev, struct aesd_dev, cdev);
+    file->private_data = dev;
+
     return 0;
 }
 
@@ -42,6 +46,9 @@ int aesd_release(struct inode *inode, struct file *filp)
     /**
      * TODO: handle release
      */
+    
+    // nothing is needed here
+
     return 0;
 }
 
@@ -53,7 +60,32 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     /**
      * TODO: handle read
      */
-    return retval;
+
+    struct aesd_dev *aesd_device = filp->private_data;
+
+    if (mutex_lock_interruptible(&aesd_device->lock))
+        retvalurn -ERESTARTSYS;
+
+    if (*offset >= aesd_device->buffer_size) {
+        retval = 0;
+        goto out;
+    }
+
+    if (len > aesd_device->buffer_size - *offset)
+        len = aesd_device->buffer_size - *offset;
+
+    if (copy_to_user(buf, aesd_device->buffer + *offset, len)) {
+        retval = -EFAULT;
+        goto out;
+    }
+
+    *offset += len;
+    retval = len;
+
+    out:
+        mutex_unlock(&aesd_device->lock);
+        return retval;
+
 }
 
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
@@ -142,12 +174,8 @@ void aesd_cleanup_module(void)
 {
     dev_t devno = MKDEV(aesd_major, aesd_minor);
 
+    // cleanup actions
     cdev_del(&aesd_device.cdev);
-
-    /**
-     * TODO: cleanup AESD specific poritions here as necessary
-     */
-
     unregister_chrdev_region(devno, 1);
     device_destroy(aesd_device.class, devno);
     kfree(aesd_device.buffer);

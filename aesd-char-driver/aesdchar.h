@@ -32,6 +32,9 @@ struct aesd_dev
      char *buffer;
      ssize_t buffer_size;
      struct mutex lock;
+     struct device *device;
+     struct class *class;
+
 };
 
 

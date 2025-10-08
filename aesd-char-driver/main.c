@@ -147,25 +147,9 @@ int aesd_init_module(void)
         unregister_chrdev_region(dev, 1);
         return result;
     }
-
-    // create class
-    aesd_device.class = class_create(THIS_MODULE, CLASS_NAME);
-    if (IS_ERR(aesd_device.class)) {
-        cdev_del(&aesd_device);
-        unregister_chrdev_region(dev, 1);
-        printk(KERN_WARNING "Error creating class");
-        return PTR_ERR(aesd_device->class);
-    }
-
-    // create device node in /dev
-    aesd_device.device = device_create(my_class, NULL, dev, NULL, DEVICE_NAME);
-    if (IS_ERR(aesd_device.device)) {
-        class_destroy(aesd_device.class);
-        cdev_del(&aesd_device);
-        unregister_chrdev_region(dev, 1);
-        printk(KERN_WARNING "Failed to create device");
-        return PTR_ERR(&aesd_device);
-    }
+    
+    // init mutex
+    mutex_init(&my_device.lock);
 
     return result;
 }

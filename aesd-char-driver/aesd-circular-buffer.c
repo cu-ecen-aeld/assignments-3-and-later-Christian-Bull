@@ -56,9 +56,6 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
         entries = (AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED - buffer->out_offs) + buffer->in_offs;
     }
     
-    // debug
-    syslog(LOG_INFO, "Entries = %zu\n", entries);
-
     // search for the entry
     for (size_t i = 0; i < entries; i++) {
         struct aesd_buffer_entry *entry = &buffer->entry[idx];
@@ -90,11 +87,8 @@ void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const s
     * TODO: implement per description
     */
     
-    syslog(LOG_INFO, "Writing buffer entry \"%.*s\"", (int)add_entry->size, add_entry->buffptr);
-
     // overwrite oldest entry and update out_offs
     if (buffer->full) {
-        syslog(LOG_INFO, "Buffer full %hhu \n", buffer->out_offs);
         buffer->out_offs = (buffer->out_offs +1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
     }
 
@@ -114,7 +108,4 @@ void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const s
 void aesd_circular_buffer_init(struct aesd_circular_buffer *buffer)
 {
     memset(buffer,0,sizeof(struct aesd_circular_buffer));
-
-    // adds syslog capability
-    openlog("aesdbuffer", LOG_PID | LOG_CONS, LOG_DAEMON);
 }

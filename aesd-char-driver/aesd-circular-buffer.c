@@ -57,7 +57,8 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     }
     
     // search for the entry
-    for (size_t i = 0; i < entries; i++) {
+    size_t i;
+    for (i = 0; i < entries; i++) {
         struct aesd_buffer_entry *entry = &buffer->entry[idx];
 
         if (char_offset < bytes_searched + entry->size) {

@@ -36,18 +36,17 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     * TODO: implement per description
     */
 
-    // this searchs for an item in a buffer and returns a pointer to the buffer entry
+    size_t bytes_searched = 0;
+    size_t i;
+    size_t idx = buffer->out_offs;
+    size_t entries;
 
     // if buffer or search offset is empty
     if (!buffer || !entry_offset_byte_rtn) {
         return NULL;
     }
 
-    size_t bytes_searched = 0;
-    size_t idx = buffer->out_offs;
-
     // get valid entries in the buffer
-    size_t entries;
     if (buffer->full) {
         entries = AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
     } else if (buffer->in_offs >= buffer->out_offs) {
@@ -57,7 +56,6 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     }
     
     // search for the entry
-    size_t i;
     for (i = 0; i < entries; i++) {
         struct aesd_buffer_entry *entry = &buffer->entry[idx];
 

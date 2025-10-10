@@ -94,8 +94,12 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
-    ssize_t retval = -ENOMEM;
     struct aesd_dev *dev = filp->private_data;
+    ssize_t retval = count;
+    char *kbuf;
+    size_t copied = 0, remaining = count;
+    const char *newline;
+    struct aesd_buffer_entry new_entry;
 
     PDEBUG("write %zu bytes with f_pos %lld",count,*f_pos);
     /**
@@ -108,21 +112,71 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     if (mutex_lock_interruptible(&dev->lock))
         return -ERESTARTSYS;
 
-    if (count > AESD_BUFFER_SIZE)
-        count = AESD_BUFFER_SIZE;
-
-    if (copy_from_user(dev->buffer, buf, count)) {
-        retval = -EFAULT;
+    kbuf = kmalloc(count, GFP_KERNEL);
+    if (!kbuf) {
+        retval = -ENOMEM;
         goto out;
     }
 
-    dev->buffer_size = count;
-    retval = count;
+    if (copy_from_user(kbuf, buf, count)) {
+        retval = -EFAULT;
+        goto free_buf;
+    }
 
+    // main loop to append data into device, wait until new line then append, uses buffer from circ-buff
+    while (remaining) {
+        size_t chunk = remaining;
+
+        dev->working_entry = krealloc(dev->working_entry, dev->working_size + chunk, GFP_KERNEL);
+
+        if (!dev->working_entry) {
+            retval = -ENOMEM;
+            goto free_buf;
+        }
+
+        memcpy(dev->working_entry + dev->working_size, kbuf + copied, chunk);
+
+        dev->working_entry += chunk;
+        copied += chunk;
+        remaining -= chunk;
+
+        newline = memchr(dev->working_entry, '\n', dev->working_size);
+        if (newline) {
+            size_t entry_size = newline - dev->working_entry +1;
+
+            char *entry_buf = kmalloc(entry_size, GFP_KERNEL);
+            if(!entry_buf) {
+                retval = -ENOMEM;
+                goto free_buf;
+            }
+
+            memcpy(entry_buf, dev->working_entry, entry_size);
+
+            new_entry.buffptr = entry_buf;
+            new_entry.size = entry_size;
+
+            aesd_circular_buffer_add_entry(&dev->circ_buffer, &new_entry);
+
+            {
+                size_t leftover = dev->working_size - entry_size;
+                memmove(dev->working_entry,
+                        dev->working_entry + entry_size,
+                        leftover);
+                dev->working_size = leftover;
+                dev->working_entry = krealloc(dev->working_entry,
+                                              dev->working_size,
+                                              GFP_KERNEL);
+            }
+        }
+    }
+
+free_buf:
+    kfree(kbuf);
 out:
     mutex_unlock(&dev->lock);
     return retval;
 }
+
 struct file_operations aesd_fops = {
     .owner =    THIS_MODULE,
     .read =     aesd_read,
@@ -181,6 +235,10 @@ int aesd_init_module(void)
     aesd_device.buffer = kmalloc(AESD_BUFFER_SIZE, GFP_KERNEL);
     aesd_device.buffer_size = 0;
 
+    // buffer setup
+    aesd_circular_buffer_init(&aesd_device.circ_buffer);
+    aesd_device.working_entry = NULL;
+    aesd_device.working_size = 0;
 
     return result;
 }
@@ -197,6 +255,8 @@ void aesd_cleanup_module(void)
     class_destroy(aesd_device.class);
 
     // aesd specific cleanup
+    kfree(aesd_device.working_entry);
+
     if (aesd_device.buffer) {
         kfree(aesd_device.buffer);
         aesd_device.buffer = NULL;

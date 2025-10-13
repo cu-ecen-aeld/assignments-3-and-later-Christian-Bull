@@ -16,7 +16,11 @@
 #define BACKLOG 10  // how many pending connections queue holds
 #define FILE_BUF_SIZE 1024
 
+#ifdef USE_AESD_CHAR_DEVICE
+const char *fileName = "/dev/aesdchar";
+#else
 const char *fileName = "/var/tmp/aesdsocketdata";
+#endif
 
 int write_to_file(const char *data, size_t len) {
   int fd;
@@ -244,17 +248,21 @@ int main(int argc, char *argv[]) {
     daemon = 1;
   }
 
+  syslog(LOG_INFO, "Writing to file %s", fileName);
+
   // for tracking threads
   TAILQ_HEAD(thread_list, thread_data);
   struct thread_list active_threads;
   TAILQ_INIT(&active_threads);
 
-  int fd_clear = open(fileName, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-  if (fd_clear == -1) {
-    perror("Failed to clear file");
-  } else {
-    close(fd_clear);
-  }
+  #ifndef USE_AESD_CHAR_DEVICE
+    int fd_clear = open(fileName, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd_clear == -1) {
+      perror("Failed to clear file");
+    } else {
+      close(fd_clear);
+    }
+  #endif
 
   struct sockaddr_storage their_addr;
   socklen_t addr_size;
@@ -329,11 +337,13 @@ int main(int argc, char *argv[]) {
   fprintf(stdout, "Server listening on port %s\n", PORT);
 
   // output time to file every 10 seconds
-  pthread_t ts_thread;
-  if (pthread_create(&ts_thread, NULL, timestamp_thread, &global_mutex) != 0) {
-      perror("Error creating timestamp thread");
-      exit(1);
-  }
+  #ifndef USE_AESD_CHAR_DEVICE
+    pthread_t ts_thread;
+    if (pthread_create(&ts_thread, NULL, timestamp_thread, &global_mutex) != 0) {
+        perror("Error creating timestamp thread");
+        exit(1);
+    }
+  #endif
 
   // now accept an incoming connection:
   while (1) {

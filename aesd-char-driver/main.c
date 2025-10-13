@@ -190,12 +190,19 @@ out:
     return retval;
 }
 
+// my server app calls fsync but it isn't required for the driver
+static int aesd_fsync(struct file *filp, loff_t start, loff_t end, int datasync)
+{
+    return 0;
+}
+
 struct file_operations aesd_fops = {
     .owner =    THIS_MODULE,
     .read =     aesd_read,
     .write =    aesd_write,
     .open =     aesd_open,
     .release =  aesd_release,
+    .fsync = aesd_fsync,
 };
 
 static int aesd_setup_cdev(struct aesd_dev *dev)
@@ -258,23 +265,35 @@ int aesd_init_module(void)
 
 void aesd_cleanup_module(void)
 {
+
+    struct aesd_dev *dev = &aesd_device;
+    struct aesd_buffer_entry *entry;
+    uint8_t index;
     dev_t devno = MKDEV(aesd_major, aesd_minor);
 
-    // cleanup actions
-    cdev_del(&aesd_device.cdev);
-    unregister_chrdev_region(MKDEV(aesd_major, aesd_minor), 1);
-    device_destroy(aesd_device.class, devno);
-    kfree(aesd_device.buffer);
-    class_destroy(aesd_device.class);
+    pr_info("aesdchar: device cleanup starting\n");
 
-    // aesd specific cleanup
-    kfree(aesd_device.working_entry);
-
-    if (aesd_device.buffer) {
-        kfree(aesd_device.buffer);
-        aesd_device.buffer = NULL;
+    AESD_CIRCULAR_BUFFER_FOREACH(entry, &dev->circ_buffer, index) {
+        if (entry->buffptr) {
+            kfree(entry->buffptr);
+            entry->buffptr = NULL;
+            entry->size = 0;
+        }
     }
 
+    if (dev->working_entry) {
+        kfree(dev->working_entry);
+        dev->working_entry = NULL;
+        dev->working_size = 0;
+    }
+
+    // cleanup actions
+    device_destroy(aesd_device.class, devno);
+    class_destroy(aesd_device.class);
+    cdev_del(&aesd_device.cdev);
+    unregister_chrdev_region(MKDEV(aesd_major, aesd_minor), 1);
+    
+    pr_info("aesdchar: device cleanup finished\n");
 }
 
 module_init(aesd_init_module);

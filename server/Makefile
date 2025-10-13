@@ -11,6 +11,9 @@ all: aesdsocket
 aesdsocket: aesdsocket.c
 	$(CC) $(CFLAGS) -o aesdsocket $(INCLUDES) $(LDFLAGS) aesdsocket.c
 
+driver: aesdsocket.c
+	$(CC) $(CFLAGS) -DUSE_AESD_CHAR_DEVICE -o aesdsocket $(INCLUDES) $(LDFLAGS) aesdsocket.c
+
 clean veryclean:
 	$(RM) aesdsocket
 	$(RM) $(LOG_FILE)

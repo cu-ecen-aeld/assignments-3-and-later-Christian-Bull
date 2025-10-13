@@ -60,6 +60,9 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 {
     ssize_t retval = 0;
     struct aesd_dev *aesd_device = filp->private_data;
+    size_t entry_offset = 0;
+    size_t bytes_to_copy;
+    struct aesd_buffer_entry *entry;
 
     PDEBUG("read %zu bytes with f_pos %lld",count,*f_pos);
     /**
@@ -69,26 +72,29 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     if (mutex_lock_interruptible(&aesd_device->lock))
         return -ERESTARTSYS;
 
-    if (*f_pos >= aesd_device->buffer_size) {
+    entry = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->circ_buffer, *f_pos, &entry_offset);
+
+    if (!entry) {
         retval = 0;
         goto out;
     }
 
-    if (count > aesd_device->buffer_size - *f_pos)
-        count = aesd_device->buffer_size - *f_pos;
+    bytes_to_copy = entry->size - entry_offset;
+    if (count < bytes_to_copy) {
+        bytes_to_copy = count;
+    }
 
-    if (copy_to_user(buf, aesd_device->buffer + *f_pos, count)) {
+    if (copy_to_user(buf, entry->buffptr + entry_offset, bytes_to_copy)) {
         retval = -EFAULT;
         goto out;
     }
 
-    *f_pos += count;
-    retval = count;
+    *f_pos += bytes_to_copy;
+    retval = bytes_to_copy;
 
-    out:
-        mutex_unlock(&aesd_device->lock);
-        return retval;
-
+out:
+    mutex_unlock(&dev->lock);
+    return retval;
 }
 
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
@@ -142,7 +148,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 
         newline = memchr(dev->working_entry, '\n', dev->working_size);
         if (newline) {
-            size_t entry_size = newline - dev->working_entry +1;
+            size_t entry_size = (newline - dev->working_entry) +1;
 
             char *entry_buf = kmalloc(entry_size, GFP_KERNEL);
             if(!entry_buf) {
@@ -249,7 +255,7 @@ void aesd_cleanup_module(void)
 
     // cleanup actions
     cdev_del(&aesd_device.cdev);
-    unregister_chrdev_region(devno, 1);
+    unregister_chrdev_region(MKDEV(aesd_major, aesd_minor), 1);
     device_destroy(aesd_device.class, devno);
     kfree(aesd_device.buffer);
     class_destroy(aesd_device.class);

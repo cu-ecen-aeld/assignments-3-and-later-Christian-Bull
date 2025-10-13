@@ -108,6 +108,13 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     struct aesd_buffer_entry new_entry;
 
     PDEBUG("write %zu bytes with f_pos %lld",count,*f_pos);
+
+    pr_info("aesd_write: added entry: size=%zu in_offs=%u out_offs=%u full=%d\n",
+        new_entry.size,
+        dev->circ_buffer.in_offs,
+        dev->circ_buffer.out_offs,
+        dev->circ_buffer.full);
+
     /**
      * TODO: handle write
      * Handle write operation, newline signals complete write
@@ -142,7 +149,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 
         memcpy(dev->working_entry + dev->working_size, kbuf + copied, chunk);
 
-        dev->working_entry += chunk;
+        dev->working_size += chunk;
         copied += chunk;
         remaining -= chunk;
 

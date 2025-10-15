@@ -190,6 +190,39 @@ out:
     return retval;
 }
 
+
+loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
+{
+    struct aesd_dev *aesd_device = filp->private_data;
+    loff_t newpos;
+
+    mutex_lock(&aesd_device->lock);
+
+    switch (whence) {
+        case 0: /* SEEK_SET */
+            newpos = off;
+            break;
+        case 1: /* SEEK_CUR */
+            newpos = filp->f_pos + off;
+            break;
+        case 2: /* SEEK_END */
+            newpos = aesd_device->total_size + off; // total bytes written so far
+            break;
+        default:
+            mutex_unlock(&aesd_device->lock);
+            return -EINVAL;
+    }
+
+    if (newpos < 0 || newpos > aesd_device->total_size) {
+        mutex_unlock(&aesd_device->lock);
+        return -EINVAL;
+    }
+
+    filp->f_pos = newpos;
+    mutex_unlock(&aesd_device->lock);
+    return newpos;
+}
+
 // my server app calls fsync but it isn't required for the driver
 static int aesd_fsync(struct file *filp, loff_t start, loff_t end, int datasync)
 {
@@ -203,6 +236,7 @@ struct file_operations aesd_fops = {
     .open =     aesd_open,
     .release =  aesd_release,
     .fsync = aesd_fsync,
+    .llseek = aesd_llseek,
 };
 
 static int aesd_setup_cdev(struct aesd_dev *dev)

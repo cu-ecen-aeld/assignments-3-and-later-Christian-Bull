@@ -41,6 +41,9 @@ struct aesd_dev
      struct aesd_circular_buffer circ_buffer;
      char *working_entry;
      size_t working_size;
+
+     // for llseek
+     size_t total_size;
 };
 
 

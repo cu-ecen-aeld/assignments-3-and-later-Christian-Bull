@@ -31,7 +31,7 @@ MODULE_AUTHOR("Christian Bull");
 MODULE_LICENSE("Dual BSD/GPL");
 
 struct aesd_dev aesd_device;
-struct aesd_dev *dev;
+struct aesd_dev *dev = &aesd_device;
 
 int aesd_open(struct inode *inode, struct file *filp)
 {

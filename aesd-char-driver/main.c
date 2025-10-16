@@ -226,8 +226,7 @@ loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
 }
 
 long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
-    // struct aesd_dev *aesd_device = filp->private_data;
-
+    
     size_t i;
     unsigned int buf_index;
     struct aesd_buffer_entry *entry;
@@ -303,6 +302,7 @@ struct file_operations aesd_fops = {
     .release =  aesd_release,
     .fsync = aesd_fsync,
     .llseek = aesd_llseek,
+    .unlocked_ioctl = aesd_ioctl,
 };
 
 static int aesd_setup_cdev(struct aesd_dev *dev)

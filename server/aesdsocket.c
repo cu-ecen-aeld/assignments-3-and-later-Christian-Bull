@@ -190,6 +190,8 @@ void *handle_connection(void *connection_param) {
       // complete packet found
       if (buf[i] == '\n') {
 
+
+        #ifdef USE_AESD_CHAR_DEVICE
         // check if the string is AESDCHAR_IOCSEEKTO:X,Y
         // special handling for this
         if (strncmp(packet_buf, "AESDCHAR_IOCSEEKTO:", 19) == 0) {
@@ -206,48 +208,50 @@ void *handle_connection(void *connection_param) {
             packet_len = 0;
             continue;
           }
-
-          pthread_mutex_lock(thread_func_args->mutex);
-
-          int fr = write_to_file(packet_buf, packet_len);
-          if (fr == -1) {
-            perror("write");
-            pthread_mutex_unlock(thread_func_args->mutex);
-          }
-
-          // send back contents of file
-          int fd_send = open(fileName, O_RDONLY);
-          if (fd_send == -1) {
-            perror("Error opening file");
-            pthread_mutex_unlock(thread_func_args->mutex);
-            break;
-          }
-
-          char file_buf[FILE_BUF_SIZE];
-          ssize_t bytes_read;
-
-          while ((bytes_read = read(fd_send, file_buf, FILE_BUF_SIZE)) > 0) {
-            ssize_t bytes_sent = 0;
-            while (bytes_sent < bytes_read) {
-              ssize_t n =
-                  send(thread_func_args->client_fd, file_buf + bytes_sent,
-                       bytes_read - bytes_sent, 0);
-              if (n == -1) {
-                perror("send");
-                close(fd_send);
-                exit(1);
-                pthread_mutex_unlock(thread_func_args->mutex);
-              }
-              bytes_sent += n;
-            }
-          }
-          close(fd_send);
-
-          // unlock mutex
-          pthread_mutex_unlock(thread_func_args->mutex);
-
-          packet_len = 0;
         }
+        #endif
+
+        pthread_mutex_lock(thread_func_args->mutex);
+
+        int fr = write_to_file(packet_buf, packet_len);
+        if (fr == -1) {
+          perror("write");
+          pthread_mutex_unlock(thread_func_args->mutex);
+        }
+
+        // send back contents of file
+        int fd_send = open(fileName, O_RDONLY);
+        if (fd_send == -1) {
+          perror("Error opening file");
+          pthread_mutex_unlock(thread_func_args->mutex);
+          break;
+        }
+
+        char file_buf[FILE_BUF_SIZE];
+        ssize_t bytes_read;
+
+        while ((bytes_read = read(fd_send, file_buf, FILE_BUF_SIZE)) > 0) {
+          ssize_t bytes_sent = 0;
+          while (bytes_sent < bytes_read) {
+            ssize_t n =
+                send(thread_func_args->client_fd, file_buf + bytes_sent,
+                      bytes_read - bytes_sent, 0);
+            if (n == -1) {
+              perror("send");
+              close(fd_send);
+              exit(1);
+              pthread_mutex_unlock(thread_func_args->mutex);
+            }
+            bytes_sent += n;
+          }
+        }
+        close(fd_send);
+
+        // unlock mutex
+        pthread_mutex_unlock(thread_func_args->mutex);
+
+        packet_len = 0;
+        
       }
     }
   }

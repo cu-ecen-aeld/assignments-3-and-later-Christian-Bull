@@ -8,11 +8,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/syslog.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <sys/ioctl.h>
 #define PORT "9000" // the port users will be connecting to
 #define BACKLOG 10  // how many pending connections queue holds
 #define FILE_BUF_SIZE 1024
@@ -69,8 +69,8 @@ int write_to_file(const char *data, size_t len) {
 }
 
 struct aesd_seekto {
-    uint32_t write_cmd;
-    uint32_t write_cmd_offset;
+  uint32_t write_cmd;
+  uint32_t write_cmd_offset;
 };
 
 int send_ioctl(uint32_t write_cmd, uint32_t write_cmd_offset) {
@@ -78,10 +78,8 @@ int send_ioctl(uint32_t write_cmd, uint32_t write_cmd_offset) {
 
   syslog(LOG_INFO, "Sending ioctl command");
 
-  struct aesd_seekto seekto = {
-      .write_cmd = write_cmd,
-      .write_cmd_offset = write_cmd_offset
-  };
+  struct aesd_seekto seekto = {.write_cmd = write_cmd,
+                               .write_cmd_offset = write_cmd_offset};
 
   fd = open(fileName, O_RDWR);
   if (fd == -1) {
@@ -96,10 +94,10 @@ int send_ioctl(uint32_t write_cmd, uint32_t write_cmd_offset) {
   }
 
   if (close(fd) == -1) {
-      perror("close");
-      return -1;
+    perror("close");
+    return -1;
   }
-  
+
   return 0;
 }
 
@@ -112,9 +110,8 @@ void *get_in_addr(struct sockaddr *sa) {
   return &(((struct sockaddr_in6 *)sa)->sin6_addr);
 }
 
-int sockfd = -1; // global listening socket
+int sockfd = -1;     // global listening socket
 pthread_t ts_thread; // global timestamp thread
-
 
 // signal handler
 void handle_signal(int sig) {
@@ -189,264 +186,262 @@ void *handle_connection(void *connection_param) {
       }
 
       packet_buf[packet_len++] = buf[i];
-      
-      
 
       // complete packet found
       if (buf[i] == '\n') {
 
-
         // check if the string is AESDCHAR_IOCSEEKTO:X,Y
         // special handling for this
-        if (strncmp(packet_buf, "AESDCHAR_IOCSEEKTO:", 19) ==0) {
+        if (strncmp(packet_buf, "AESDCHAR_IOCSEEKTO:", 19) == 0) {
           int x, y;
           if (sscanf(packet_buf + 19, "%d,%d", &x, &y) == 2) {
-              
+
             syslog(LOG_INFO, "Received IOCSEEKTO command: X=%d, Y=%d\n", x, y);
-            
+
             // send ioctl cmd
             if (send_ioctl(x, y) == -1) {
               perror("sending ioctl cmd");
             }
-          
+
             packet_len = 0;
             continue;
-        }
-
-        pthread_mutex_lock(thread_func_args->mutex);
-
-        int fr = write_to_file(packet_buf, packet_len);
-        if (fr == -1) {
-          perror("write");
-          pthread_mutex_unlock(thread_func_args->mutex);
-        }
-
-        // send back contents of file
-        int fd_send = open(fileName, O_RDONLY);
-        if (fd_send == -1) {
-          perror("Error opening file");
-          pthread_mutex_unlock(thread_func_args->mutex);
-          break;
-        }
-
-
-        char file_buf[FILE_BUF_SIZE];
-        ssize_t bytes_read;
-
-        while ((bytes_read = read(fd_send, file_buf, FILE_BUF_SIZE)) > 0) {
-          ssize_t bytes_sent = 0;
-          while (bytes_sent < bytes_read) {
-            ssize_t n = send(thread_func_args->client_fd, file_buf + bytes_sent,
-                             bytes_read - bytes_sent, 0);
-            if (n == -1) {
-              perror("send");
-              close(fd_send);
-              exit(1);
-              pthread_mutex_unlock(thread_func_args->mutex);
-            }
-            bytes_sent += n;
           }
+
+          pthread_mutex_lock(thread_func_args->mutex);
+
+          int fr = write_to_file(packet_buf, packet_len);
+          if (fr == -1) {
+            perror("write");
+            pthread_mutex_unlock(thread_func_args->mutex);
+          }
+
+          // send back contents of file
+          int fd_send = open(fileName, O_RDONLY);
+          if (fd_send == -1) {
+            perror("Error opening file");
+            pthread_mutex_unlock(thread_func_args->mutex);
+            break;
+          }
+
+          char file_buf[FILE_BUF_SIZE];
+          ssize_t bytes_read;
+
+          while ((bytes_read = read(fd_send, file_buf, FILE_BUF_SIZE)) > 0) {
+            ssize_t bytes_sent = 0;
+            while (bytes_sent < bytes_read) {
+              ssize_t n =
+                  send(thread_func_args->client_fd, file_buf + bytes_sent,
+                       bytes_read - bytes_sent, 0);
+              if (n == -1) {
+                perror("send");
+                close(fd_send);
+                exit(1);
+                pthread_mutex_unlock(thread_func_args->mutex);
+              }
+              bytes_sent += n;
+            }
+          }
+          close(fd_send);
+
+          // unlock mutex
+          pthread_mutex_unlock(thread_func_args->mutex);
+
+          packet_len = 0;
         }
-        close(fd_send);
-
-        // unlock mutex
-        pthread_mutex_unlock(thread_func_args->mutex);
-
-        packet_len = 0;
       }
     }
   }
-  
-client_done:
-  if (packet_buf) {
-    syslog(LOG_INFO, "Closing client connection from %s", s);
+  client_done:
+    if (packet_buf) {
+      syslog(LOG_INFO, "Closing client connection from %s", s);
 
-    free(packet_buf);
-    packet_buf = NULL;
-    packet_len = 0;
-    packet_size = 0;
-    thread_func_args->thread_complete_success = true;
+      free(packet_buf);
+      packet_buf = NULL;
+      packet_len = 0;
+      packet_size = 0;
+      thread_func_args->thread_complete_success = true;
+    }
+    close(thread_func_args->client_fd);
+
+    return thread_func_args;
   }
-  close(thread_func_args->client_fd);
 
-  return thread_func_args;
-}
-
-void *timestamp_thread(void *arg) {
+  void *timestamp_thread(void *arg) {
     pthread_mutex_t *mutex = (pthread_mutex_t *)arg;
 
     syslog(LOG_INFO, "Starting timestamp thread");
 
     while (1) {
-        sleep(10);
+      sleep(10);
 
-        time_t now = time(NULL);
-        struct tm *t = localtime(&now);
-        char time_str[64];
-        strftime(time_str, sizeof(time_str), "timestamp:%Y-%m-%d %H:%M:%S\n", t);
+      time_t now = time(NULL);
+      struct tm *t = localtime(&now);
+      char time_str[64];
+      strftime(time_str, sizeof(time_str), "timestamp:%Y-%m-%d %H:%M:%S\n", t);
 
-        syslog(LOG_INFO, "Logging time to file %s", time_str);
+      syslog(LOG_INFO, "Logging time to file %s", time_str);
 
-        pthread_mutex_lock(mutex);
+      pthread_mutex_lock(mutex);
 
-        if (write_to_file(time_str, strlen(time_str)) == -1) {
-            syslog(LOG_ERR, "Error writing timestamp to file");
-        }
+      if (write_to_file(time_str, strlen(time_str)) == -1) {
+        syslog(LOG_ERR, "Error writing timestamp to file");
+      }
 
-        pthread_mutex_unlock(mutex);
+      pthread_mutex_unlock(mutex);
     }
     return NULL;
-}
-
-int main(int argc, char *argv[]) {
-
-  openlog("aesdsocket", LOG_PID | LOG_CONS, LOG_DAEMON);
-
-  pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-  int daemon = 0;
-  if (argc == 2 && strcmp(argv[1], "-d") == 0) {
-    daemon = 1;
   }
 
-  syslog(LOG_INFO, "Writing to file %s", fileName);
+  int main(int argc, char *argv[]) {
 
-  // for tracking threads
-  TAILQ_HEAD(thread_list, thread_data);
-  struct thread_list active_threads;
-  TAILQ_INIT(&active_threads);
+    openlog("aesdsocket", LOG_PID | LOG_CONS, LOG_DAEMON);
 
-  #ifndef USE_AESD_CHAR_DEVICE
+    pthread_mutex_t global_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+    int daemon = 0;
+    if (argc == 2 && strcmp(argv[1], "-d") == 0) {
+      daemon = 1;
+    }
+
+    syslog(LOG_INFO, "Writing to file %s", fileName);
+
+    // for tracking threads
+    TAILQ_HEAD(thread_list, thread_data);
+    struct thread_list active_threads;
+    TAILQ_INIT(&active_threads);
+
+#ifndef USE_AESD_CHAR_DEVICE
     int fd_clear = open(fileName, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd_clear == -1) {
       perror("Failed to clear file");
     } else {
       close(fd_clear);
     }
-  #endif
+#endif
 
-  struct sockaddr_storage their_addr;
-  socklen_t addr_size;
-  struct addrinfo hints, *res;
-  int sockfd, new_fd;
-  struct addrinfo *servinfo;
+    struct sockaddr_storage their_addr;
+    socklen_t addr_size;
+    struct addrinfo hints, *res;
+    int sockfd, new_fd;
+    struct addrinfo *servinfo;
 
-  setup_signal_handlers();
+    setup_signal_handlers();
 
-  // first, load up address structs with getaddrinfo():
-  memset(&hints, 0, sizeof hints);
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_flags = AI_PASSIVE;
+    // first, load up address structs with getaddrinfo():
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
 
-  int status;
-  if ((status = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
-    fprintf(stderr, "gai error: %s\n", gai_strerror(status));
-    exit(1);
-    return -1;
-  }
-
-  // make a socket, bind it, and listen on it:
-  res = servinfo;
-  sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-
-  int bind_status;
-  if ((bind_status = bind(sockfd, res->ai_addr, res->ai_addrlen)) < 0) {
-    fprintf(stderr, "gai error: %s\n", gai_strerror(bind_status));
-    exit(1);
-    return -1;
-  }
-
-  freeaddrinfo(servinfo);
-
-  // fork after binding
-  if (daemon) {
-    pid_t pid = fork();
-    if (pid < 0) {
-      perror("fork");
-      exit(EXIT_FAILURE);
-    }
-    if (pid > 0) {
-      // parent exits
-      exit(EXIT_SUCCESS);
+    int status;
+    if ((status = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
+      fprintf(stderr, "gai error: %s\n", gai_strerror(status));
+      exit(1);
+      return -1;
     }
 
-    if (setsid() < 0) { // create new session
-      perror("setsid");
-      exit(EXIT_FAILURE);
+    // make a socket, bind it, and listen on it:
+    res = servinfo;
+    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+
+    int bind_status;
+    if ((bind_status = bind(sockfd, res->ai_addr, res->ai_addrlen)) < 0) {
+      fprintf(stderr, "gai error: %s\n", gai_strerror(bind_status));
+      exit(1);
+      return -1;
     }
 
-    if (chdir("/") < 0) {
-      perror("chdir");
-      exit(EXIT_FAILURE);
+    freeaddrinfo(servinfo);
+
+    // fork after binding
+    if (daemon) {
+      pid_t pid = fork();
+      if (pid < 0) {
+        perror("fork");
+        exit(EXIT_FAILURE);
+      }
+      if (pid > 0) {
+        // parent exits
+        exit(EXIT_SUCCESS);
+      }
+
+      if (setsid() < 0) { // create new session
+        perror("setsid");
+        exit(EXIT_FAILURE);
+      }
+
+      if (chdir("/") < 0) {
+        perror("chdir");
+        exit(EXIT_FAILURE);
+      }
+
+      close(STDIN_FILENO);
+      close(STDOUT_FILENO);
+      close(STDERR_FILENO);
+
+      open("/dev/null", O_RDONLY); // stdin
+      open("/dev/null", O_WRONLY); // stdout
+      open("/dev/null", O_RDWR);   // stderr
     }
 
-    close(STDIN_FILENO);
-    close(STDOUT_FILENO);
-    close(STDERR_FILENO);
+    if (listen(sockfd, BACKLOG) == -1) {
+      fprintf(stderr, "gai error: listen");
+      exit(1);
+      return -1;
+    }
+    fprintf(stdout, "Server listening on port %s\n", PORT);
 
-    open("/dev/null", O_RDONLY); // stdin
-    open("/dev/null", O_WRONLY); // stdout
-    open("/dev/null", O_RDWR);   // stderr
-  }
-
-  if (listen(sockfd, BACKLOG) == -1) {
-    fprintf(stderr, "gai error: listen");
-    exit(1);
-    return -1;
-  }
-  fprintf(stdout, "Server listening on port %s\n", PORT);
-
-  // output time to file every 10 seconds
-  #ifndef USE_AESD_CHAR_DEVICE
+// output time to file every 10 seconds
+#ifndef USE_AESD_CHAR_DEVICE
     pthread_t ts_thread;
-    if (pthread_create(&ts_thread, NULL, timestamp_thread, &global_mutex) != 0) {
-        perror("Error creating timestamp thread");
-        exit(1);
+    if (pthread_create(&ts_thread, NULL, timestamp_thread, &global_mutex) !=
+        0) {
+      perror("Error creating timestamp thread");
+      exit(1);
     }
-  #endif
+#endif
 
-  // now accept an incoming connection:
-  while (1) {
-    addr_size = sizeof their_addr;
-    new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
+    // now accept an incoming connection:
+    while (1) {
+      addr_size = sizeof their_addr;
+      new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
 
-    if (new_fd == -1) {
-      perror("accept");
-      continue;
-    }
+      if (new_fd == -1) {
+        perror("accept");
+        continue;
+      }
 
-    // setup thread
-    struct thread_data *tdata = malloc(sizeof(*tdata));
+      // setup thread
+      struct thread_data *tdata = malloc(sizeof(*tdata));
 
-    tdata->mutex = &global_mutex;
-    tdata->thread = malloc(sizeof(pthread_t));
-    tdata->thread_complete_success = false;
-    tdata->client_fd = new_fd;
-    memcpy(&tdata->client_addr, &their_addr, addr_size);
-    tdata->addr_len = addr_size;
+      tdata->mutex = &global_mutex;
+      tdata->thread = malloc(sizeof(pthread_t));
+      tdata->thread_complete_success = false;
+      tdata->client_fd = new_fd;
+      memcpy(&tdata->client_addr, &their_addr, addr_size);
+      tdata->addr_len = addr_size;
 
-    int rc = pthread_create(tdata->thread, NULL, handle_connection, tdata);
-    if (rc != 0) {
-      syslog(LOG_ERR, "Creating thread failed");
-      perror("pthread_create");
-      close(new_fd);
-      free(tdata);
-      return false;
-    }
+      int rc = pthread_create(tdata->thread, NULL, handle_connection, tdata);
+      if (rc != 0) {
+        syslog(LOG_ERR, "Creating thread failed");
+        perror("pthread_create");
+        close(new_fd);
+        free(tdata);
+        return false;
+      }
 
-    TAILQ_INSERT_TAIL(&active_threads, tdata, entries);
+      TAILQ_INSERT_TAIL(&active_threads, tdata, entries);
 
-    // loop through threads
-    struct thread_data *item, *tmp;
+      // loop through threads
+      struct thread_data *item, *tmp;
 
-    TAILQ_FOREACH_SAFE(item, &active_threads, entries, tmp) {
+      TAILQ_FOREACH_SAFE(item, &active_threads, entries, tmp) {
         if (item->thread_complete_success) {
-            pthread_join(*item->thread, NULL);
-            TAILQ_REMOVE(&active_threads, item, entries);
-            free(item->thread);
-            free(item);
+          pthread_join(*item->thread, NULL);
+          TAILQ_REMOVE(&active_threads, item, entries);
+          free(item->thread);
+          free(item);
         }
+      }
     }
   }
-}

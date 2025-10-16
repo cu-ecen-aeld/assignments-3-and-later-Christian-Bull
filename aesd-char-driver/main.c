@@ -226,26 +226,22 @@ loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
 }
 
 long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
-    ssize_t retval;
-    struct aesd_dev *aesd_device = filp->private_data;
+    // struct aesd_dev *aesd_device = filp->private_data;
 
-    size_t new_fpos = 0;
     size_t i;
     unsigned int buf_index;
     struct aesd_buffer_entry *entry;
+    struct aesd_buffer_entry *found_entry;
 
     size_t total_bytes = 0;
     struct aesd_seekto seekto;
+    size_t tmp_offset;
 
     // switch is best practice despite only having one command
     switch(cmd) {
         case AESDCHAR_IOCSEEKTO:
             // valid command
             PDEBUG("IOCSEEKTO cmd called");
-            retval = 1;
-
-            aesd_update_file_position_using_helper(filp, dev, seekto.write_cmd, seekto.write_cmd_offset);
-
 
             // if it's out of range
             if (seekto.write_cmd >= AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED) {
@@ -258,6 +254,7 @@ long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
 
             buf_index = dev->circ_buffer.out_offs;
 
+            //
             for (i=0; i < seekto.write_cmd; i++) {
                 entry = &dev->circ_buffer.entry[buf_index];
                 total_bytes += entry->size;
@@ -265,18 +262,31 @@ long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
             }
 
             entry = &dev->circ_buffer.entry[buf_index];
-            if (entry_offset >= entry->size) {
+            if (seekto.write_cmd_offset >= entry->size) {
                 mutex_unlock(&dev->lock);
                 return -EINVAL;
             }
 
+            total_bytes += seekto.write_cmd_offset;
 
+            found_entry = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->circ_buffer, total_bytes, &tmp_offset);
+
+            // no position found
+            if (!found_entry) {
+                    mutex_unlock(&dev->lock);
+                    return -EINVAL;
+            }
+
+            filp->f_pos = total_bytes;
+
+            mutex_unlock(&dev->lock);
+
+            return 0;
 
         default:
             PDEBUG("Incorrect command called");
             return -ENOTTY;
     }
-    return retval;
 }
 
 // my server app calls fsync but it isn't required for the driver
@@ -308,8 +318,6 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
     }
     return err;
 }
-
-
 
 int aesd_init_module(void)
 {

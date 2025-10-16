@@ -73,7 +73,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     if (mutex_lock_interruptible(&aesd_device->lock))
         return -ERESTARTSYS;
 
-    entry = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->circ_buffer, *f_pos, &entry_offset);
+    entry = aesd_circular_buffer_find_entry_offset_for_fpos(&aesd_device->circ_buffer, *f_pos, &entry_offset);
 
     if (!entry) {
         retval = 0;
@@ -94,7 +94,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     retval = bytes_to_copy;
 
 out:
-    mutex_unlock(&dev->lock);
+    mutex_unlock(&aesd_device->lock);
     return retval;
 }
 
@@ -195,8 +195,14 @@ loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
 {
     struct aesd_dev *aesd_device = filp->private_data;
     loff_t newpos;
+    size_t total_size = 0;
+    int i;
 
     mutex_lock(&aesd_device->lock);
+
+    for (i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++) {
+        total_size += aesd_device->circ_buffer.entry[i].size;
+    }
 
     switch (whence) {
         case 0: /* SEEK_SET */
@@ -206,7 +212,7 @@ loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
             newpos = filp->f_pos + off;
             break;
         case 2: /* SEEK_END */
-            newpos = aesd_device->total_size + off; // total bytes written so far
+            newpos = total_size + off;
             break;
         default:
             mutex_unlock(&aesd_device->lock);
@@ -232,9 +238,14 @@ long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
     struct aesd_buffer_entry *entry;
     struct aesd_buffer_entry *found_entry;
 
+    struct aesd_dev *dev = filp->private_data;
+
     size_t total_bytes = 0;
     struct aesd_seekto seekto;
     size_t tmp_offset;
+
+    PDEBUG("ioctl: cmd=0x%x type=0x%x nr=%u dir=0x%x size=%u",
+        cmd, _IOC_TYPE(cmd), _IOC_NR(cmd), _IOC_DIR(cmd), _IOC_SIZE(cmd));
 
     // switch is best practice despite only having one command
     switch(cmd) {

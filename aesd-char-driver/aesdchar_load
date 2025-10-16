@@ -1,7 +1,7 @@
 #!/bin/sh
 module=aesdchar
 device=aesdchar
-mode="664"
+mode="666"
 cd `dirname $0`
 set -e
 # Group: since distributions do it differently, look for wheel or use staff
@@ -11,9 +11,9 @@ else
     group="wheel"
 fi
 
-if [ -e /bin/${module}.ko ]; then
+if [ -e ${module}.ko ]; then
     echo "Loading local built file ${module}.ko"
-    insmod /bin/$module.ko $* || exit 1
+    insmod ./$module.ko $* || exit 1
 else
     echo "Local file ${module}.ko not found, attempting to modprobe"
     modprobe ${module} || exit 1

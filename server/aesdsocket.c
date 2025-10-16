@@ -76,7 +76,7 @@ struct aesd_seekto {
 int send_ioctl(uint32_t write_cmd, uint32_t write_cmd_offset) {
   int fd;
 
-  syslog(LOG_INFO, "Sending ioctl command");
+  syslog(LOG_INFO, "Sending ioctl command to %s", fileName);
 
   struct aesd_seekto seekto = {.write_cmd = write_cmd,
                                .write_cmd_offset = write_cmd_offset};

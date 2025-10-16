@@ -12,6 +12,7 @@
 #include <sys/syslog.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 #define PORT "9000" // the port users will be connecting to
 #define BACKLOG 10  // how many pending connections queue holds
 #define FILE_BUF_SIZE 1024
@@ -21,6 +22,9 @@ const char *fileName = "/dev/aesdchar";
 #else
 const char *fileName = "/var/tmp/aesdsocketdata";
 #endif
+
+#define AESD_IOC_MAGIC 'k'
+#define AESDCHAR_IOCSEEKTO _IOWR(AESD_IOC_MAGIC, 1, struct aesd_seekto)
 
 int write_to_file(const char *data, size_t len) {
   int fd;
@@ -61,6 +65,41 @@ int write_to_file(const char *data, size_t len) {
   fflush(stdout);
   fflush(stderr);
 
+  return 0;
+}
+
+struct aesd_seekto {
+    uint32_t write_cmd;
+    uint32_t write_cmd_offset;
+};
+
+int send_ioctl(uint32_t write_cmd, uint32_t write_cmd_offset) {
+  int fd;
+
+  syslog(LOG_INFO, "Sending ioctl command");
+
+  struct aesd_seekto seekto = {
+      .write_cmd = write_cmd,
+      .write_cmd_offset = write_cmd_offset
+  };
+
+  fd = open(fileName, O_RDWR);
+  if (fd == -1) {
+    perror("open");
+    fprintf(stderr, "Error: Opening file %s failed\n", fileName);
+    return -1;
+  }
+
+  if (ioctl(fd, AESDCHAR_IOCSEEKTO, &seekto) == -1) {
+    perror("ioctl");
+    return -1;
+  }
+
+  if (close(fd) == -1) {
+      perror("close");
+      return -1;
+  }
+  
   return 0;
 }
 
@@ -150,9 +189,29 @@ void *handle_connection(void *connection_param) {
       }
 
       packet_buf[packet_len++] = buf[i];
+      
+      
 
+      // complete packet found
       if (buf[i] == '\n') {
-        // complete packet found
+
+
+        // check if the string is AESDCHAR_IOCSEEKTO:X,Y
+        // special handling for this
+        if (strncmp(packet_buf, "AESDCHAR_IOCSEEKTO:", 19) ==0) {
+          int x, y;
+          if (sscanf(packet_buf + 19, "%d,%d", &x, &y) == 2) {
+              
+            syslog(LOG_INFO, "Received IOCSEEKTO command: X=%d, Y=%d\n", x, y);
+            
+            // send ioctl cmd
+            if (send_ioctl(x, y) == -1) {
+              perror("sending ioctl cmd");
+            }
+          
+            packet_len = 0;
+            continue;
+        }
 
         pthread_mutex_lock(thread_func_args->mutex);
 
@@ -169,6 +228,7 @@ void *handle_connection(void *connection_param) {
           pthread_mutex_unlock(thread_func_args->mutex);
           break;
         }
+
 
         char file_buf[FILE_BUF_SIZE];
         ssize_t bytes_read;
@@ -196,6 +256,7 @@ void *handle_connection(void *connection_param) {
       }
     }
   }
+  
 client_done:
   if (packet_buf) {
     syslog(LOG_INFO, "Closing client connection from %s", s);

@@ -23,7 +23,7 @@ const char *fileName = "/dev/aesdchar";
 const char *fileName = "/var/tmp/aesdsocketdata";
 #endif
 
-#define AESD_IOC_MAGIC 'k'
+#define AESD_IOC_MAGIC 0x16
 #define AESDCHAR_IOCSEEKTO _IOWR(AESD_IOC_MAGIC, 1, struct aesd_seekto)
 
 int write_to_file(const char *data, size_t len) {
@@ -205,6 +205,43 @@ void *handle_connection(void *connection_param) {
               perror("sending ioctl cmd");
             }
 
+            struct aesd_seekto seekto = {.write_cmd = x, .write_cmd_offset = y};
+
+            // return contents of file
+            pthread_mutex_lock(thread_func_args->mutex);
+            
+            int fd_ioctl = open(fileName, O_RDWR);
+            if (fd_ioctl == -1) {
+              perror("Error opening file");
+              pthread_mutex_unlock(thread_func_args->mutex);
+              break;
+            }
+
+            // send ioctl command
+
+            char file_buf_ioctl[FILE_BUF_SIZE];
+            ssize_t bytes_read_ioctl;
+
+            while ((bytes_read_ioctl = read(fd_ioctl, file_buf_ioctl, FILE_BUF_SIZE)) > 0) {
+              ssize_t bytes_sent_ioctl = 0;
+              while (bytes_sent_ioctl < bytes_read_ioctl) {
+                ssize_t n =
+                    send(thread_func_args->client_fd, file_buf_ioctl + bytes_sent_ioctl,
+                          bytes_read_ioctl - bytes_sent_ioctl, 0);
+                if (n == -1) {
+                  perror("send");
+                  close(fd_ioctl);
+                  exit(1);
+                  pthread_mutex_unlock(thread_func_args->mutex);
+                }
+                bytes_sent_ioctl += n;
+              }
+            }
+            close(fd_ioctl);
+
+            // unlock mutex
+            pthread_mutex_unlock(thread_func_args->mutex);
+
             packet_len = 0;
             continue;
           }
@@ -314,6 +351,7 @@ void *handle_connection(void *connection_param) {
     struct thread_list active_threads;
     TAILQ_INIT(&active_threads);
 
+    // only clear file unless we're not using the driver device
 #ifndef USE_AESD_CHAR_DEVICE
     int fd_clear = open(fileName, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd_clear == -1) {

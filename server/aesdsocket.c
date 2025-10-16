@@ -200,24 +200,23 @@ void *handle_connection(void *connection_param) {
 
             syslog(LOG_INFO, "Received IOCSEEKTO command: X=%d, Y=%d\n", x, y);
 
-            // send ioctl cmd
-            if (send_ioctl(x, y) == -1) {
-              perror("sending ioctl cmd");
-            }
-
             struct aesd_seekto seekto = {.write_cmd = x, .write_cmd_offset = y};
 
-            // return contents of file
             pthread_mutex_lock(thread_func_args->mutex);
             
             int fd_ioctl = open(fileName, O_RDWR);
             if (fd_ioctl == -1) {
               perror("Error opening file");
               pthread_mutex_unlock(thread_func_args->mutex);
-              break;
+              continue;
             }
 
             // send ioctl command
+            if (ioctl(fd_ioctl, AESDCHAR_IOCSEEKTO, &seekto) == -1) {
+              perror("ioctl");
+              pthread_mutex_unlock(thread_func_args->mutex);
+              continue;
+            }
 
             char file_buf_ioctl[FILE_BUF_SIZE];
             ssize_t bytes_read_ioctl;
@@ -231,8 +230,8 @@ void *handle_connection(void *connection_param) {
                 if (n == -1) {
                   perror("send");
                   close(fd_ioctl);
-                  exit(1);
                   pthread_mutex_unlock(thread_func_args->mutex);
+                  exit(1);
                 }
                 bytes_sent_ioctl += n;
               }

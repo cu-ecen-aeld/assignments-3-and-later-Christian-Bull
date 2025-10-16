@@ -242,6 +242,10 @@ long aesd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg) {
             // valid command
             PDEBUG("IOCSEEKTO cmd called");
 
+            if (copy_from_user(&seekto, (const void __user *)arg, sizeof(seekto))) {
+                return -EFAULT;
+            }
+
             // if it's out of range
             if (seekto.write_cmd >= AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED) {
                 return -EINVAL;

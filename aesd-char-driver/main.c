@@ -34,12 +34,17 @@ MODULE_LICENSE("Dual BSD/GPL");
 struct aesd_dev aesd_device;
 struct aesd_dev *dev = &aesd_device;
 
+extern loff_t aesd_llseek(struct file *filp, loff_t off, int whence);
+
 int aesd_open(struct inode *inode, struct file *filp)
 {
     PDEBUG("open");
     
     dev = container_of(inode->i_cdev, struct aesd_dev, cdev);
     filp->private_data = dev;
+    
+    pr_info("aesdchar: open: filp->f_op=%px llseek=%px\n",
+            filp->f_op, filp->f_op ? filp->f_op->llseek : NULL);
 
     return 0;
 }
@@ -348,6 +353,7 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
     if (err) {
         printk(KERN_ERR "Error %d adding aesd cdev", err);
     }
+    
     return err;
 }
 
@@ -379,7 +385,9 @@ int aesd_init_module(void)
         unregister_chrdev_region(dev, 1);
         return result;
     }
-    
+
+    pr_info("aesdchar: fops=%px llseek(sym)=%px llseek(ptr)=%px\n", &aesd_fops, aesd_llseek, aesd_fops.llseek);
+
     // aesd specific setup
     mutex_init(&aesd_device.lock);
     aesd_device.buffer = kmalloc(AESD_BUFFER_SIZE, GFP_KERNEL);

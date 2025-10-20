@@ -209,24 +209,25 @@ loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
     uint8_t idx;
 
     pr_info("llseek: out=%u in=%u full=%d", dev->circ_buffer.out_offs, dev->circ_buffer.in_offs, dev->circ_buffer.full);
-    pr_info("llseek: total_size=%zu off=%lld whence=%d", total_size, off, whence);
 
     if (mutex_lock_interruptible(&dev->lock)) {
         return -ERESTARTSYS;
     }
     
     idx = dev->circ_buffer.out_offs;
-    for (i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++) {
-        struct aesd_buffer_entry *entry = &dev->circ_buffer.entry[idx];
-
-        if (entry->buffptr)
-            total_size += entry->size;
-
-        idx = (idx + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
-
-        if (!dev->circ_buffer.full && idx == dev->circ_buffer.in_offs)
-            break;
+    if (dev->circ_buffer.full) {
+        // all entries valid
+        for (i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++)
+            total_size += dev->circ_buffer.entry[i].size;
+    } else {
+        // only entries between out_offs and in_offs
+        while (idx != dev->circ_buffer.in_offs) {
+            total_size += dev->circ_buffer.entry[idx].size;
+            idx = (idx + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+        }
     }
+
+    pr_info("llseek: total_size=%zu off=%lld whence=%d\n", total_size, off, whence);
 
     switch (whence) {
         case 0: /* SEEK_SET */

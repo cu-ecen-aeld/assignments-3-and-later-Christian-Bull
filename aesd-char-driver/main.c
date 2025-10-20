@@ -242,7 +242,7 @@ loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
     }
 
     // if newpos is out of range
-    if (newpos < 0 || newpos > dev->total_size) {
+    if (newpos < 0) {
         mutex_unlock(&dev->lock);
         return -EINVAL;
     }

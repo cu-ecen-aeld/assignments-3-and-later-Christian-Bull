@@ -208,8 +208,8 @@ loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
     int i;
     uint8_t idx;
 
-    PDEBUG("llseek: out=%u in=%u full=%d", dev->circ_buffer.out_offs, dev->circ_buffer.in_offs, dev->circ_buffer.full);
-    PDEBUG("llseek: total_size=%zu off=%lld whence=%d", total_size, off, whence);
+    pr_info("llseek: out=%u in=%u full=%d", dev->circ_buffer.out_offs, dev->circ_buffer.in_offs, dev->circ_buffer.full);
+    pr_info("llseek: total_size=%zu off=%lld whence=%d", total_size, off, whence);
 
     if (mutex_lock_interruptible(&dev->lock)) {
         return -ERESTARTSYS;

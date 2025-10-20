@@ -60,20 +60,22 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
     ssize_t retval = 0;
-    struct aesd_dev *aesd_device = filp->private_data;
+    struct aesd_dev *dev = filp->private_data;
     size_t entry_offset = 0;
     size_t bytes_to_copy;
     struct aesd_buffer_entry *entry;
 
-    PDEBUG("read %zu bytes with f_pos %lld",count,*f_pos);
+    PDEBUG("read: f_pos=%lld out=%u in=%u full=%d",
+        *f_pos, dev->circ_buffer.out_offs, dev->circ_buffer.in_offs, dev->circ_buffer.full);
+
     /**
      * TODO: handle read
      */
 
-    if (mutex_lock_interruptible(&aesd_device->lock))
+    if (mutex_lock_interruptible(&dev->lock))
         return -ERESTARTSYS;
 
-    entry = aesd_circular_buffer_find_entry_offset_for_fpos(&aesd_device->circ_buffer, *f_pos, &entry_offset);
+    entry = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->circ_buffer, *f_pos, &entry_offset);
 
     if (!entry) {
         retval = 0;
@@ -94,7 +96,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     retval = bytes_to_copy;
 
 out:
-    mutex_unlock(&aesd_device->lock);
+    mutex_unlock(&dev->lock);
     return retval;
 }
 
@@ -193,17 +195,20 @@ out:
 
 loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
 {
-    struct aesd_dev *aesd_device = filp->private_data;
+    struct aesd_dev *dev = filp->private_data;
     loff_t newpos;
     size_t total_size = 0;
     int i;
     uint8_t idx;
 
-    if (mutex_lock_interruptible(&aesd_device->lock)) {
+    PDEBUG("llseek: out=%u in=%u full=%d", dev->circ_buffer.out_offs, dev->circ_buffer.in_offs, dev->circ_buffer.full);
+    PDEBUG("llseek: total_size=%zu off=%lld whence=%d", total_size, off, whence);
+
+    if (mutex_lock_interruptible(&dev->lock)) {
         return -ERESTARTSYS;
     }
     
-    idx = aesd_device->circ_buffer.out_offs;
+    idx = dev->circ_buffer.out_offs;
     for (i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++) {
         struct aesd_buffer_entry *entry = &dev->circ_buffer.entry[idx];
 
@@ -227,18 +232,18 @@ loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
             newpos = total_size + off;
             break;
         default:
-            mutex_unlock(&aesd_device->lock);
+            mutex_unlock(&dev->lock);
             return -EINVAL;
     }
 
     // if newpos is out of range
-    if (newpos < 0 || newpos > aesd_device->total_size) {
-        mutex_unlock(&aesd_device->lock);
+    if (newpos < 0 || newpos > dev->total_size) {
+        mutex_unlock(&dev->lock);
         return -EINVAL;
     }
 
     filp->f_pos = newpos;
-    mutex_unlock(&aesd_device->lock);
+    mutex_unlock(&dev->lock);
     
     return newpos;
 }

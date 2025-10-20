@@ -197,11 +197,23 @@ loff_t aesd_llseek(struct file *filp, loff_t off, int whence)
     loff_t newpos;
     size_t total_size = 0;
     int i;
+    uint8_t idx;
 
-    mutex_lock(&aesd_device->lock);
-
+    if (mutex_lock_interruptible(&aesd_device->lock)) {
+        return -ERESTARTSYS;
+    }
+    
+    idx = aesd_device->circ_buffer.out_offs;
     for (i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++) {
-        total_size += aesd_device->circ_buffer.entry[i].size;
+        struct aesd_buffer_entry *entry = &dev->circ_buffer.entry[idx];
+
+        if (entry->buffptr)
+            total_size += entry->size;
+
+        idx = (idx + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+
+        if (!dev->circ_buffer.full && idx == dev->circ_buffer.in_offs)
+            break;
     }
 
     switch (whence) {

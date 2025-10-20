@@ -190,11 +190,13 @@ void *handle_connection(void *connection_param) {
       // complete packet found
       if (buf[i] == '\n') {
 
+        syslog(LOG_INFO, "Received packet (len=%zd): '%.*s'", packet_len, (int)packet_len, packet_buf);
 
         #ifdef USE_AESD_CHAR_DEVICE
         // check if the string is AESDCHAR_IOCSEEKTO:X,Y
         // special handling for this
-        if (strncmp(packet_buf, "AESDCHAR_IOCSEEKTO:", 19) == 0) {
+        if (strncmp(packet_buf, "AESDCHAR_IOCSEEKTO:", strlen("AESDCHAR_IOCSEEKTO:")) == 0) {
+
           int x, y;
           if (sscanf(packet_buf + 19, "%d,%d", &x, &y) == 2) {
 

@@ -43,8 +43,10 @@ int aesd_open(struct inode *inode, struct file *filp)
     dev = container_of(inode->i_cdev, struct aesd_dev, cdev);
     filp->private_data = dev;
     
-    pr_info("aesdchar: open: filp->f_op=%px llseek=%px\n",
-            filp->f_op, filp->f_op ? filp->f_op->llseek : NULL);
+    filp->f_mode &= ~FMODE_STREAM;
+
+    pr_info("aesdchar: open: filp->f_op=%px llseek=%px f_mode=0x%x\n",
+            filp->f_op, filp->f_op ? filp->f_op->llseek : NULL, filp->f_mode);
 
     return 0;
 }
